@@ -154,8 +154,8 @@ def _run_is_opt(
         gate="IS_OPT",
         passed=passed,
         reason=(
-            f"IS-val Sharpe={opt_result.best_is_sharpe:.3f} "
-            f"IS-val PF={opt_result.best_is_val_pf:.3f} "
+            f"IS-val Sharpe={opt_result.best_is_sharpe:.3f} (need>{cfg.is_opt_min_sharpe}) "
+            f"IS-val PF={opt_result.best_is_val_pf:.3f} (need>{cfg.is_opt_min_pf}) "
             f"({opt_result.n_complete}/{opt_result.n_trials} trials)"
         ),
         metrics={
@@ -195,8 +195,10 @@ def _run_oos_val(
         gate="OOS_VAL",
         passed=passed,
         reason=(
-            f"PF={result.pf:.3f} trades={result.trades} "
-            f"DD={result.max_dd_pct:.1f}% daily_pnl=${result.daily_pnl:.2f}"
+            f"PF={result.pf:.3f} (need>={cfg.oos_min_pf}) "
+            f"trades={result.trades} (need>={cfg.oos_min_trades}) "
+            f"DD={result.max_dd_pct:.1f}% (max {cfg.oos_max_dd_pct}%) "
+            f"daily_pnl=${result.daily_pnl:.2f}"
         ),
         metrics={
             "oos_pf": result.pf,
@@ -276,10 +278,12 @@ def _run_confirm(
         gate="CONFIRM",
         passed=passed,
         reason=(
-            f"MC p_ruin={mc.p_ruin:.3f} "
-            f"WF={wf.profitable_windows}/{wf.total_windows} "
-            f"sens_min_pf={sens.min_neighbor_pf:.3f if sens else 'n/a'} "
-            f"cross={cross['confirmed']} "
+            f"MC={'PASS' if mc_pass else 'FAIL'} p_ruin={mc.p_ruin:.3f} "
+            f"WF={'PASS' if wf.passed else 'FAIL'} {wf.profitable_windows}/{wf.total_windows} "
+            f"sens={'PASS' if sens is None or sens.passed else 'FAIL'} "
+            f"min_pf={sens.min_neighbor_pf:.3f if sens else 'n/a'} "
+            f"cross={'PASS' if cross['confirmed'] else 'FAIL'} "
+            f"corr={'PASS' if corr['max_corr'] < cfg.confirm_max_corr else 'FAIL'} "
             f"max_corr={corr['max_corr']:.3f}"
         ),
         metrics={
