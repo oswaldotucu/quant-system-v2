@@ -199,6 +199,21 @@ async def seed_experiments(
     timeframes: list[str] = Form(...),
     priority: int = Form(0),
 ) -> dict[str, Any]:
+    from config.instruments import TICKERS, TIMEFRAMES
+    from quant.strategies.registry import STRATEGY_REGISTRY
+
+    if strategy not in STRATEGY_REGISTRY:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown strategy '{strategy}'. Available: {sorted(STRATEGY_REGISTRY.keys())}",
+        )
+    invalid_tickers = [t for t in tickers if t not in TICKERS]
+    if invalid_tickers:
+        raise HTTPException(status_code=400, detail=f"Invalid tickers: {invalid_tickers}")
+    invalid_tfs = [tf for tf in timeframes if tf not in TIMEFRAMES]
+    if invalid_tfs:
+        raise HTTPException(status_code=400, detail=f"Invalid timeframes: {invalid_tfs}")
+
     try:
         results = seed(strategy, tickers, timeframes, priority)
         return {
@@ -270,7 +285,7 @@ def run_lab_backtest(
 
 
 @router.get("/pine/{exp_id}")
-async def download_pine(exp_id: int) -> FileResponse:
+def download_pine(exp_id: int) -> FileResponse:
     """Generate and download Pine Script for an experiment."""
     from quant.automation.pine_generator import generate_pine_script
 
@@ -285,7 +300,7 @@ async def download_pine(exp_id: int) -> FileResponse:
 
 
 @router.get("/checklist/{exp_id}")
-async def download_checklist(exp_id: int) -> FileResponse:
+def download_checklist(exp_id: int) -> FileResponse:
     """Generate and download forward-test checklist for an experiment."""
     from quant.automation.checklist_generator import generate_checklist
 
