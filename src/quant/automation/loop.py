@@ -103,33 +103,50 @@ class AutomationLoop:
 
         log.info("Tick: %d experiments pending", len(experiments))
 
+        # Dynamic timeout: IS_OPT can take up to 2h (300 Optuna trials).
+        # Other gates complete in < 5min.
+        has_is_opt = any(e.gate == "IS_OPT" for e in experiments)
+        tick_timeout = 7200 if has_is_opt else 300
+
         with ThreadPoolExecutor(max_workers=n_workers) as pool:
             futures: dict[Future[GateResult], Experiment] = {
                 pool.submit(run_next_gate, exp): exp
                 for exp in experiments
             }
 
-            for future in as_completed(futures, timeout=3600):
-                exp = futures[future]
-                try:
-                    result = future.result()
-                    self._bus.emit_gate_progress(
-                        exp_id=exp.id,
-                        gate=exp.gate,
-                        status="passed" if result.passed else "rejected",
-                        reason=result.reason,
-                    )
-                    if result.passed and exp.gate == "CONFIRM":
-                        notify_macos(
-                            "FWD_READY",
-                            f"{exp.strategy} {exp.ticker} {exp.timeframe} is ready!",
-                        )
-                        self._bus.emit_fwd_ready(
+            try:
+                for future in as_completed(futures, timeout=tick_timeout):
+                    exp = futures[future]
+                    try:
+                        result = future.result()
+                        elapsed = result.metrics.get("elapsed_s", 0.0)
+                        self._bus.emit_gate_progress(
                             exp_id=exp.id,
+                            gate=exp.gate,
+                            status="passed" if result.passed else "rejected",
+                            reason=result.reason,
                             strategy=exp.strategy,
                             ticker=exp.ticker,
-                            oos_pf=exp.oos_pf or 0.0,
+                            timeframe=exp.timeframe,
+                            elapsed_s=elapsed,
                         )
-                except Exception as e:
-                    log.error("Gate future error for exp %d: %s", exp.id, e, exc_info=True)
-                    self._bus.emit_gate_error(exp.id, exp.gate, str(e))
+                        if result.passed and exp.gate == "CONFIRM":
+                            notify_macos(
+                                "FWD_READY",
+                                f"{exp.strategy} {exp.ticker} {exp.timeframe} is ready!",
+                            )
+                            self._bus.emit_fwd_ready(
+                                exp_id=exp.id,
+                                strategy=exp.strategy,
+                                ticker=exp.ticker,
+                                oos_pf=exp.oos_pf or 0.0,
+                            )
+                    except Exception as e:
+                        log.error(
+                            "Gate future error for exp %d (%s/%s/%s at %s): %s",
+                            exp.id, exp.strategy, exp.ticker, exp.timeframe,
+                            exp.gate, e, exc_info=True,
+                        )
+                        self._bus.emit_gate_error(exp.id, exp.gate, str(e))
+            except TimeoutError:
+                log.error("Tick timed out after %ds — some gates may still be running", tick_timeout)
