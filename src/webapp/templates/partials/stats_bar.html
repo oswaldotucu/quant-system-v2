@@ -1,0 +1,16 @@
+<div class="flex items-center gap-4 text-xs flex-wrap">
+  <div class="text-gray-400 font-bold">TOTAL: <span class="text-white text-sm">{{ total }}</span></div>
+  <div class="h-4 border-l border-gray-700"></div>
+  {% for gate in all_gates %}
+  {% set count = by_gate.get(gate, 0) %}
+  <a href="/pipeline?gate={{ gate }}"
+     class="flex items-center gap-1 hover:text-white transition-colors
+       {% if gate == 'DEPLOYED' %}text-green-400
+       {% elif gate == 'FWD_READY' %}text-yellow-400
+       {% elif gate == 'REJECTED' %}text-red-400
+       {% else %}text-blue-400{% endif %}">
+    <span class="font-bold text-sm">{{ count }}</span>
+    <span class="text-gray-500">{{ gate }}</span>
+  </a>
+  {% endfor %}
+</div>

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}FWD_READY Review - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <h1 class="text-xl font-bold text-yellow-400">FWD_READY Review</h1>
+
+  {% if not experiments %}
+  <div class="text-gray-500 text-center py-12">No strategies awaiting review.</div>
+  {% else %}
+  {% for exp in experiments %}
+  <div class="bg-gray-900 border border-yellow-700 rounded p-4 space-y-3">
+    <div class="flex items-center justify-between">
+      <div>
+        <span class="font-bold text-yellow-300">{{ exp.strategy }}</span>
+        <span class="text-gray-400 ml-2">{{ exp.ticker }} {{ exp.timeframe }}</span>
+      </div>
+      <div class="flex gap-2">
+        <a href="/api/pine/{{ exp.id }}"
+           class="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-xs">
+          Download Pine Script
+        </a>
+        <a href="/api/checklist/{{ exp.id }}"
+           class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+          Download Checklist
+        </a>
+        <button hx-post="/api/experiments/{{ exp.id }}/approve"
+                hx-confirm="Deploy this strategy to live trading?"
+                hx-swap="none"
+                class="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-xs">
+          Approve - Go Live
+        </button>
+        <button hx-post="/api/experiments/{{ exp.id }}/reject"
+                hx-confirm="Reject this strategy?"
+                hx-swap="none"
+                class="px-3 py-1 bg-red-900 hover:bg-red-800 rounded text-xs text-red-300">
+          Reject
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-4 gap-2 text-xs">
+      <div><span class="text-gray-500">OOS PF:</span> <span class="text-green-400">{{ "%.3f"|format(exp.oos_pf) if exp.oos_pf else 'N/A' }}</span></div>
+      <div><span class="text-gray-500">Trades:</span> {{ exp.oos_trades or 'N/A' }}</div>
+      <div><span class="text-gray-500">$/day:</span> <span class="text-green-400">${{ "%.2f"|format(exp.daily_pnl) if exp.daily_pnl else 'N/A' }}</span></div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Settings - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <h1 class="text-xl font-bold text-gray-400">Settings</h1>
+
+  <div class="grid grid-cols-2 gap-6">
+    <!-- IS/OOS dates -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-3 text-red-400">IS/OOS DATES (IMMUTABLE)</h2>
+      <div class="space-y-1 text-xs font-mono">
+        <div><span class="text-gray-500">IS_TRAIN:</span> {{ cfg.is_start }} to {{ cfg.is_train_end }}</div>
+        <div><span class="text-gray-500">IS_VAL:</span>   {{ (cfg.is_train_end | string)[:-2] }}01-01 to {{ cfg.is_val_end }}</div>
+        <div><span class="text-gray-500">OOS:</span>      {{ cfg.oos_start }} to present</div>
+      </div>
+      <p class="text-xs text-red-400 mt-2">DO NOT change after first use. Invalidates all results.</p>
+    </div>
+
+    <!-- Pipeline thresholds -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-3">PIPELINE THRESHOLDS</h2>
+      <div class="space-y-1 text-xs font-mono">
+        <div><span class="text-gray-500">screen_min_pf:</span> {{ cfg.screen_min_pf }}</div>
+        <div><span class="text-gray-500">screen_min_trades:</span> {{ cfg.screen_min_trades }}</div>
+        <div><span class="text-gray-500">oos_min_pf:</span> {{ cfg.oos_min_pf }}</div>
+        <div><span class="text-gray-500">oos_min_trades:</span> {{ cfg.oos_min_trades }}</div>
+        <div><span class="text-gray-500">oos_max_dd_pct:</span> {{ cfg.oos_max_dd_pct }}%</div>
+      </div>
+    </div>
+
+    <!-- Data fetch -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-3">DATA</h2>
+      <button hx-post="/api/data/fetch"
+              hx-swap="none"
+              class="px-3 py-2 bg-blue-700 hover:bg-blue-600 rounded text-sm w-full">
+        Update Data Now (Yahoo Finance)
+      </button>
+      <p class="text-xs text-gray-500 mt-2">Incremental update — only downloads new bars.</p>
+    </div>
+
+    <!-- Commission -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-3">COMMISSION</h2>
+      <div class="text-xs font-mono">
+        <div><span class="text-gray-500">RT commission:</span> ${{ cfg.commission_rt }}</div>
+        <div class="text-gray-600 mt-1">Includes fees + slippage (both sides)</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

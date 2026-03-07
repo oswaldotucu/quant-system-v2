@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8000"
+    volumes:
+      - ./data:/app/data
+      - ./data/pine_scripts:/app/pine_scripts
+    env_file: .env
+    restart: unless-stopped

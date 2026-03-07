@@ -1,0 +1,16 @@
+/* Minimal overrides on top of Tailwind CDN */
+
+/* HTMX loading indicator */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator { display: inline; }
+
+/* Dark scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+/* Monospace tables */
+table { border-collapse: collapse; }
+
+/* Chart canvas sizing */
+canvas { max-height: 300px; }

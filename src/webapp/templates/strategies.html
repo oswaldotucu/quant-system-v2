@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Strategies - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ showForm: false }">
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-bold text-purple-400">Strategies</h1>
+    <button @click="showForm = !showForm"
+            class="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs">
+      + Seed New Experiment
+    </button>
+  </div>
+
+  <!-- Seed form -->
+  <div x-show="showForm" class="bg-gray-900 border border-gray-700 rounded p-4 space-y-4">
+    <h2 class="text-gray-300 font-bold text-sm">Seed Experiments</h2>
+    <form hx-post="/api/seed" hx-swap="none" hx-on::after-request="showForm=false"
+          class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">Strategy</label>
+        <select name="strategy" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+          {% for s in strategies %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">Tickers (hold Cmd for multi)</label>
+        <select name="tickers" multiple class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm h-20">
+          <option value="MNQ" selected>MNQ</option>
+          <option value="MES" selected>MES</option>
+          <option value="MGC" selected>MGC</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">Timeframes</label>
+        <select name="timeframes" multiple class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm h-16">
+          <option value="15m" selected>15m</option>
+          <option value="5m">5m</option>
+          <option value="1m">1m</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button type="submit" class="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-sm w-full">
+          Seed Experiments
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Strategy catalog -->
+  <div class="space-y-2">
+    {% for strategy in strategies %}
+    <div class="bg-gray-900 border border-gray-700 rounded p-3">
+      <div class="font-bold text-sm">{{ strategy }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

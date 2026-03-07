@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Lab - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <h1 class="text-xl font-bold text-yellow-400">Lab - Ad-hoc Backtest</h1>
+  <p class="text-xs text-gray-500">Run any strategy with any params on any date range. No DB changes.</p>
+
+  <div class="grid grid-cols-2 gap-6">
+    <!-- Form -->
+    <form hx-post="/api/lab/run"
+          hx-target="#lab-results"
+          hx-swap="innerHTML"
+          hx-indicator="#lab-spinner"
+          class="bg-gray-900 border border-gray-700 rounded p-4 space-y-3">
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">Strategy</label>
+        <select name="strategy" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+          {% for s in strategies %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">Ticker</label>
+          <select name="ticker" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+            <option>MNQ</option><option>MES</option><option>MGC</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">Timeframe</label>
+          <select name="timeframe" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+            <option>15m</option><option>5m</option><option>1m</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">From</label>
+          <input type="date" name="date_from" value="2024-01-01"
+                 class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">To</label>
+          <input type="date" name="date_to" value="2026-02-27"
+                 class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">Params (JSON)</label>
+        <textarea name="params" rows="4"
+                  class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs font-mono"
+                  placeholder='{"ema_fast": 5, "ema_slow": 21, "rsi_period": 9, "rsi_os": 35, "rsi_ob": 65, "tp_pct": 1.0, "sl_pct": 2.8}'></textarea>
+      </div>
+      <button type="submit" class="w-full px-4 py-2 bg-yellow-700 hover:bg-yellow-600 rounded text-sm">
+        Run Backtest
+        <span id="lab-spinner" class="htmx-indicator ml-2">...</span>
+      </button>
+    </form>
+
+    <!-- Results -->
+    <div id="lab-results" class="bg-gray-900 border border-gray-700 rounded p-4">
+      <span class="text-gray-600 text-xs">Results will appear here...</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}quant-v2{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body class="bg-gray-950 text-gray-100 font-mono text-sm">
+
+<!-- Navigation -->
+<nav class="bg-gray-900 border-b border-gray-700 px-4 py-2 flex items-center gap-4">
+    <span class="font-bold text-green-400 text-base">QUANT V2</span>
+
+    <a href="/" class="text-gray-300 hover:text-white {% if request.url.path == '/' %}text-white border-b border-green-400{% endif %}">Dashboard</a>
+    <a href="/pipeline" class="text-gray-300 hover:text-white {% if '/pipeline' in request.url.path %}text-white border-b border-green-400{% endif %}">Pipeline</a>
+    <a href="/leaderboard" class="text-gray-300 hover:text-white {% if '/leaderboard' in request.url.path %}text-white border-b border-green-400{% endif %}">Leaderboard</a>
+    <a href="/strategies" class="text-gray-300 hover:text-white {% if '/strategies' in request.url.path %}text-white border-b border-green-400{% endif %}">Strategies</a>
+    <a href="/portfolio" class="text-gray-300 hover:text-white {% if '/portfolio' in request.url.path %}text-white border-b border-green-400{% endif %}">Portfolio</a>
+    <a href="/fwd-ready" class="text-gray-300 hover:text-white {% if '/fwd-ready' in request.url.path %}text-white border-b border-green-400{% endif %}">FWD Ready</a>
+    <a href="/lab" class="text-gray-300 hover:text-white {% if '/lab' in request.url.path %}text-white border-b border-green-400{% endif %}">Lab</a>
+    <a href="/settings" class="text-gray-300 hover:text-white {% if '/settings' in request.url.path %}text-white border-b border-green-400{% endif %}">Settings</a>
+
+    <span class="ml-auto" id="runner-status" hx-get="/api/automation/status" hx-trigger="every 5s" hx-swap="innerHTML">
+        <span class="text-gray-500">...</span>
+    </span>
+</nav>
+
+<!-- Main content -->
+<main class="max-w-7xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- SSE client -->
+<script src="/static/js/sse_client.js"></script>
+<script src="/static/js/charts.js"></script>
+
+</body>
+</html>

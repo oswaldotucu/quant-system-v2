@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Portfolio - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <h1 class="text-xl font-bold text-green-400">Portfolio</h1>
+
+  {% if deployed %}
+  <div class="grid grid-cols-3 gap-4">
+    {% for exp in deployed %}
+    <div class="bg-gray-900 border border-green-800 rounded p-4">
+      <div class="font-bold text-green-400">{{ exp.strategy }}</div>
+      <div class="text-gray-400 text-xs">{{ exp.ticker }} {{ exp.timeframe }}</div>
+      <div class="mt-2 space-y-1 text-sm">
+        <div>OOS PF: <span class="text-green-300">{{ "%.3f"|format(exp.oos_pf) if exp.oos_pf else 'N/A' }}</span></div>
+        <div>$/day: <span class="text-green-300">${{ "%.2f"|format(exp.daily_pnl) if exp.daily_pnl else 'N/A' }}</span></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-gray-500 text-center py-12">
+    No deployed strategies yet. Advance an experiment to DEPLOYED state.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

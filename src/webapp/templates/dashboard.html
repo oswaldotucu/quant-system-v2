@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header + Control Panel -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-bold text-green-400">Dashboard</h1>
+    <div class="flex gap-2">
+      {% if runner_running %}
+        <button hx-post="/api/automation/stop" hx-swap="none"
+                class="px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-white text-xs">
+          Stop Automation
+        </button>
+        <button hx-post="/api/automation/pause" hx-swap="none"
+                class="px-3 py-1 bg-yellow-700 hover:bg-yellow-600 rounded text-xs">
+          Pause
+        </button>
+      {% else %}
+        <button hx-post="/api/automation/start" hx-swap="none"
+                class="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-white text-xs">
+          Start Automation
+        </button>
+      {% endif %}
+      <button hx-post="/api/data/fetch" hx-swap="none"
+              class="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-xs">
+        Fetch Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Pipeline Stats Bar (HTMX-loaded from server partial) -->
+  <div id="stats-bar"
+       hx-get="/api/stats/html"
+       hx-trigger="load, every 30s"
+       hx-swap="innerHTML"
+       class="bg-gray-900 border border-gray-700 rounded p-3">
+    <div class="text-gray-600 text-xs">Loading stats...</div>
+  </div>
+
+  <!-- Portfolio Summary + Pipeline Counts -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-green-400 font-bold mb-2">PORTFOLIO</h2>
+      <div class="text-2xl font-bold">${{ deployed | sum(attribute='daily_pnl') | default(0) | round(2) }}/day</div>
+      <div class="text-gray-400 mt-1">{{ deployed | length }} deployed strategies</div>
+      <div class="mt-2 space-y-1">
+        {% for exp in deployed %}
+        <div class="flex justify-between text-xs">
+          <span>{{ exp.strategy }} {{ exp.ticker }} {{ exp.timeframe }}</span>
+          <span class="text-green-400">${{ exp.daily_pnl | default(0) | round(2) }}/day</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-blue-400 font-bold mb-2">PIPELINE STATUS</h2>
+      <div class="grid grid-cols-5 gap-1 text-center">
+        {% for gate in ['SCREEN', 'IS_OPT', 'OOS_VAL', 'CONFIRM', 'FWD_READY'] %}
+        <a href="/pipeline?gate={{ gate }}" class="block p-2 bg-gray-800 rounded hover:bg-gray-700">
+          <div class="text-lg font-bold text-blue-300">{{ gate_counts.get(gate, 0) }}</div>
+          <div class="text-xs text-gray-500">{{ gate }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Log tail (SSE-updated) -->
+  <div class="bg-gray-900 border border-gray-700 rounded p-4">
+    <h2 class="text-gray-400 font-bold mb-2 text-xs">AUTOMATION LOG</h2>
+    <div id="log-tail" class="font-mono text-xs text-gray-300 h-32 overflow-y-auto space-y-0.5">
+      <span class="text-gray-600">Waiting for log events...</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

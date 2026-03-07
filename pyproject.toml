@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-v2"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "vectorbt==0.26.2",
+    "numba>=0.58,<0.60",        # pin to pre-built wheel range (llvmlite 0.43 has macOS wheels)
+    "optuna>=3.6",
+    "pandas>=2.2",
+    "numpy>=1.26,<2.0",         # vectorbt 0.26.2 not compatible with numpy 2.x
+    "plotly>=5.11,<6.0",        # vectorbt 0.26.2 uses heatmapgl removed in plotly 6.x
+    "pydantic-settings>=2.2",
+    "ta>=0.11",
+    "yfinance>=0.2",
+    "scipy>=1.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.4",
+    "pyright>=1.1",
+    "pre-commit>=3.7",
+]
+
+# src/ layout: tells Python where to find packages
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "--cov=src --cov-report=term-missing --cov-fail-under=80 -x"
+markers   = ["slow: marks tests as slow (Optuna runs -- skip in CI with -m 'not slow')"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A"]
+# ANN = type annotations, S = security, B = bugbear
+ignore = ["ANN101", "ANN102"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+pythonPlatform = "Darwin"
+typeCheckingMode = "standard"
+reportMissingImports = true
+reportMissingTypeStubs = false

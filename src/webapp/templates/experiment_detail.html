@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Experiment {{ exp.id }} - quant-v2{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex items-center gap-2">
+    <a href="/pipeline" class="text-gray-500 hover:text-white text-xs">Pipeline</a>
+    <span class="text-gray-600">/</span>
+    <span class="text-white">Experiment {{ exp.id }}</span>
+    <span class="px-2 py-0.5 rounded text-xs
+      {% if exp.gate == 'DEPLOYED' %}bg-green-800 text-green-200
+      {% elif exp.gate == 'REJECTED' %}bg-red-900 text-red-300
+      {% elif exp.gate == 'FWD_READY' %}bg-yellow-700 text-yellow-200
+      {% else %}bg-gray-700 text-gray-300{% endif %}">
+      {{ exp.gate }}
+    </span>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4">
+    <!-- Identity -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-2">IDENTITY</h2>
+      <div class="space-y-1 text-sm">
+        <div><span class="text-gray-500">Strategy:</span> {{ exp.strategy }}</div>
+        <div><span class="text-gray-500">Ticker:</span> {{ exp.ticker }}</div>
+        <div><span class="text-gray-500">Timeframe:</span> {{ exp.timeframe }}</div>
+        <div><span class="text-gray-500">Priority:</span> {{ exp.priority }}</div>
+      </div>
+    </div>
+
+    <!-- OOS Results -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-2">OOS RESULTS</h2>
+      <div class="space-y-1 text-sm">
+        <div><span class="text-gray-500">PF:</span>
+          <span class="{% if exp.oos_pf and exp.oos_pf >= 1.5 %}text-green-400{% else %}text-red-400{% endif %}">
+            {{ "%.3f"|format(exp.oos_pf) if exp.oos_pf else 'N/A' }}
+          </span>
+        </div>
+        <div><span class="text-gray-500">Trades:</span> {{ exp.oos_trades or 'N/A' }}</div>
+        <div><span class="text-gray-500">$/day:</span> {{ "$%.2f"|format(exp.daily_pnl) if exp.daily_pnl else 'N/A' }}</div>
+      </div>
+    </div>
+
+    <!-- Params -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-2">BEST PARAMS</h2>
+      {% if exp.params %}
+      <div class="space-y-0.5 text-xs font-mono">
+        {% for k, v in exp.params.items() %}
+        <div><span class="text-gray-500">{{ k }}:</span> {{ v }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-gray-600 text-xs">Not yet optimized</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if exp.error_msg %}
+  <div class="bg-red-950 border border-red-800 rounded p-3 text-red-300 text-xs">
+    <span class="font-bold">Error:</span> {{ exp.error_msg }}
+  </div>
+  {% endif %}
+
+  {% if exp.gate not in ['SCREEN', 'IS_OPT'] and exp.params %}
+  <div class="bg-gray-900 border border-gray-700 rounded p-4">
+    <h2 class="text-gray-400 text-xs font-bold mb-2">OOS EQUITY CURVE</h2>
+    <canvas id="equity-chart" height="200"></canvas>
+  </div>
+  <script>
+    fetch('/api/experiments/{{ exp.id }}/equity')
+      .then(r => r.json())
+      .then(data => {
+        if (data.equity && data.equity.length > 0) {
+          renderEquityChart('equity-chart', data.equity, data.labels);
+        }
+      })
+      .catch(err => console.warn('Equity chart unavailable:', err));
+  </script>
+  {% endif %}
+
+</div>
+{% endblock %}
