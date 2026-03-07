@@ -145,3 +145,40 @@ def test_advance_experiment_rejects_invalid_columns(tmp_path: Path) -> None:
         )
 
     conn.close()
+
+
+def test_safe_commit_rollback_on_error(tmp_db: Path) -> None:
+    """Verify _safe_commit rolls back on sqlite3.Error."""
+    import sqlite3
+
+    from db.queries import _safe_commit
+
+    conn = sqlite3.connect(str(tmp_db))
+    conn.row_factory = sqlite3.Row
+
+    # sqlite3.Connection is a C-extension whose methods are read-only,
+    # so we wrap it to intercept commit() while delegating everything else.
+    class _FailingCommitConn:
+        """Thin wrapper that makes commit() raise once, then delegates."""
+
+        def __init__(self, real: sqlite3.Connection) -> None:
+            self._real = real
+
+        def commit(self) -> None:
+            raise sqlite3.OperationalError("disk full")
+
+        def rollback(self) -> None:
+            self._real.rollback()
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(self._real, name)
+
+    wrapper = _FailingCommitConn(conn)
+
+    with pytest.raises(sqlite3.OperationalError, match="disk full"):
+        _safe_commit(wrapper)  # type: ignore[arg-type]
+
+    # Connection should still be usable after rollback
+    row = conn.execute("SELECT 1 as val").fetchone()
+    assert row["val"] == 1
+    conn.close()
