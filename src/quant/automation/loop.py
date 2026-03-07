@@ -16,13 +16,12 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, Future, as_completed
-from typing import Any
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 from config.settings import get_settings
-from db.queries import list_pending_experiments, Experiment
+from db.queries import Experiment, list_pending_experiments
 from quant.automation.notifier import get_event_bus, notify_macos
-from quant.pipeline.runner import run_next_gate, GateResult
+from quant.pipeline.runner import GateResult, run_next_gate
 
 log = logging.getLogger(__name__)
 
@@ -149,4 +148,7 @@ class AutomationLoop:
                         )
                         self._bus.emit_gate_error(exp.id, exp.gate, str(e))
             except TimeoutError:
-                log.error("Tick timed out after %ds — some gates may still be running", tick_timeout)
+                log.error(
+                    "Tick timed out after %ds — some gates may still be running",
+                    tick_timeout,
+                )

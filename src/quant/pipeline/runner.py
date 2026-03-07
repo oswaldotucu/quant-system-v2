@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
 
 from db.queries import (
     Experiment,
@@ -56,15 +55,19 @@ def run_next_gate(exp: Experiment) -> GateResult:
         )
     elapsed = time.monotonic() - t0
 
-    merged_metrics = {**result.metrics, "elapsed_s": round(elapsed, 1)}
-
     if result.passed:
         log.info("Gate %s PASSED for exp %d -> %s in %.1fs",
                  current_gate, exp.id, next_gate, elapsed)
-        advance_experiment(exp.id, next_gate, merged_metrics)
+        advance_experiment(exp.id, next_gate, result.metrics)
     else:
         log.info("Gate %s FAILED for exp %d in %.1fs: %s",
                  current_gate, exp.id, elapsed, result.reason)
         reject_experiment(exp.id, f"{current_gate}: {result.reason}")
 
-    return result
+    # Return result with elapsed_s for SSE (not stored in DB)
+    return GateResult(
+        gate=result.gate,
+        passed=result.passed,
+        reason=result.reason,
+        metrics={**result.metrics, "elapsed_s": round(elapsed, 1)},
+    )

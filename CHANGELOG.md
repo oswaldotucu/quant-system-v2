@@ -5,6 +5,35 @@ Format: [date] | component | what changed | why.
 
 ---
 
+## [2026-03-07] — Pipeline Observability + Hardening
+
+### Added
+- `src/quant/pipeline/runner.py`: Gate timing via `time.monotonic()`. Every gate run now
+  logs elapsed time and stores `elapsed_s` in metrics. Helps identify slow gates.
+- `src/quant/pipeline/gates.py`: Rich rejection reasons. IS_OPT, OOS_VAL, and CONFIRM
+  reason strings now include threshold values (e.g., `PF=0.82 (need>=1.5)`) and per-check
+  PASS/FAIL labels for CONFIRM's 5 sub-checks.
+- `src/quant/optimizer/search.py`: Optuna progress logging every 50 trials. Logs trial
+  count, complete/pruned split, and best objective value.
+- `src/quant/automation/loop.py`: SSE events enriched with `strategy`, `ticker`,
+  `timeframe`, `elapsed_s`. Dynamic timeout: 7200s for IS_OPT ticks, 300s otherwise.
+  TimeoutError handling added. Error logging includes full experiment context.
+- `src/webapp/templates/experiment_detail.html`: Gate Results section showing SCREEN,
+  IS_OPT, and CONFIRM metrics already stored in DB.
+- `tests/unit/test_db.py`: Test for `_safe_commit` rollback behavior.
+
+### Fixed
+- `src/db/queries.py`: All 6 `c.commit()` calls replaced with `_safe_commit(c)` which
+  calls `rollback()` on `sqlite3.Error` before re-raising. Prevents silent partial state
+  on disk-full or lock errors.
+- `src/webapp/routes/api.py`: `download_pine` and `download_checklist` changed from
+  `async def` to `def`. They do synchronous file I/O and were blocking the event loop.
+- `src/webapp/routes/api.py`: `seed_experiments` now validates strategy name against
+  `STRATEGY_REGISTRY`, tickers against `TICKERS`, and timeframes against `TIMEFRAMES`
+  before DB insert. Returns 400 with details on invalid input.
+
+---
+
 ## [2026-03-07] — 5 New Strategy Families
 
 ### Added

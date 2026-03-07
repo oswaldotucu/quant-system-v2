@@ -281,7 +281,7 @@ def _run_confirm(
             f"MC={'PASS' if mc_pass else 'FAIL'} p_ruin={mc.p_ruin:.3f} "
             f"WF={'PASS' if wf.passed else 'FAIL'} {wf.profitable_windows}/{wf.total_windows} "
             f"sens={'PASS' if sens is None or sens.passed else 'FAIL'} "
-            f"min_pf={sens.min_neighbor_pf:.3f if sens else 'n/a'} "
+            f"min_pf={f'{sens.min_neighbor_pf:.3f}' if sens else 'n/a'} "
             f"cross={'PASS' if cross['confirmed'] else 'FAIL'} "
             f"corr={'PASS' if corr['max_corr'] < cfg.confirm_max_corr else 'FAIL'} "
             f"max_corr={corr['max_corr']:.3f}"
