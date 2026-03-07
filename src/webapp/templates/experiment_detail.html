@@ -57,6 +57,29 @@
     </div>
   </div>
 
+  <!-- Gate Results -->
+  <div class="bg-gray-900 border border-gray-700 rounded p-4">
+    <h2 class="text-gray-400 text-xs font-bold mb-2">GATE RESULTS</h2>
+    <div class="grid grid-cols-3 gap-4 text-sm">
+      <div>
+        <h3 class="text-gray-500 text-xs mb-1">SCREEN</h3>
+        <div><span class="text-gray-500">PF:</span> {{ "%.3f"|format(exp.screen_pf) if exp.screen_pf is not none else 'N/A' }}</div>
+        <div><span class="text-gray-500">Trades:</span> {{ exp.screen_trades if exp.screen_trades is not none else 'N/A' }}</div>
+      </div>
+      <div>
+        <h3 class="text-gray-500 text-xs mb-1">IS_OPT</h3>
+        <div><span class="text-gray-500">IS Sharpe:</span> {{ "%.3f"|format(exp.is_sharpe) if exp.is_sharpe is not none else 'N/A' }}</div>
+        <div><span class="text-gray-500">IS PF:</span> {{ "%.3f"|format(exp.is_pf) if exp.is_pf is not none else 'N/A' }}</div>
+      </div>
+      <div>
+        <h3 class="text-gray-500 text-xs mb-1">CONFIRM</h3>
+        <div><span class="text-gray-500">P(ruin):</span> {{ "%.3f"|format(exp.p_ruin) if exp.p_ruin is not none else 'N/A' }}</div>
+        <div><span class="text-gray-500">WF wins:</span> {{ exp.wf_windows if exp.wf_windows is not none else 'N/A' }}</div>
+        <div><span class="text-gray-500">Max corr:</span> {{ "%.3f"|format(exp.max_corr) if exp.max_corr is not none else 'N/A' }}</div>
+      </div>
+    </div>
+  </div>
+
   {% if exp.error_msg %}
   <div class="bg-red-950 border border-red-800 rounded p-3 text-red-300 text-xs">
     <span class="font-bold">Error:</span> {{ exp.error_msg }}
