@@ -17,6 +17,15 @@ from db.connection import get_conn
 log = logging.getLogger(__name__)
 
 
+def _safe_commit(conn: sqlite3.Connection) -> None:
+    """Commit or rollback on error. Prevents silent partial state."""
+    try:
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        raise
+
+
 # ---------------------------------------------------------------------------
 # Data models (lightweight, no ORM)
 # ---------------------------------------------------------------------------
@@ -98,7 +107,7 @@ def upsert_strategy(
         """,
         (name, family, description, json.dumps(param_space)),
     )
-    c.commit()
+    _safe_commit(c)
 
 
 def get_strategy(name: str, conn: sqlite3.Connection | None = None) -> Strategy | None:
@@ -152,7 +161,7 @@ def seed_experiment(
         """,
         (strategy, ticker, timeframe, priority),
     )
-    c.commit()
+    _safe_commit(c)
     return cursor.lastrowid  # type: ignore[return-value]
 
 
@@ -252,7 +261,7 @@ def advance_experiment(
         f"UPDATE experiments SET {', '.join(set_clauses)} WHERE id = ?",  # noqa: S608
         values,
     )
-    c.commit()
+    _safe_commit(c)
 
 
 def mark_experiment_error(
@@ -265,7 +274,7 @@ def mark_experiment_error(
         "UPDATE experiments SET error_msg = ? WHERE id = ?",
         (error_msg, exp_id),
     )
-    c.commit()
+    _safe_commit(c)
 
 
 def reject_experiment(
@@ -278,7 +287,7 @@ def reject_experiment(
         "UPDATE experiments SET gate = 'REJECTED', error_msg = ? WHERE id = ?",
         (reason, exp_id),
     )
-    c.commit()
+    _safe_commit(c)
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +369,7 @@ def insert_trial(
         """,
         (exp_id, trial_num, json.dumps(params), is_sharpe, is_train_pf, is_val_pf, state),
     )
-    c.commit()
+    _safe_commit(c)
 
 
 def get_best_trial(
