@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
 
 from config.settings import get_settings
 from quant.data.ingest import ingest
@@ -59,7 +58,7 @@ def main() -> int:
     # Print gap details
     all_gaps = [(k, g) for k, fr in report.per_file.items() for g in fr.gaps]
     if all_gaps:
-        print(f"\nGaps detected:")
+        print("\nGaps detected:")
         for key, gap in all_gaps:
             print(f"  {key}: {gap.gap_hours}h gap ({gap.last_existing} -> {gap.first_new})")
 

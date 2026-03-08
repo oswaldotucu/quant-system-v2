@@ -5,6 +5,32 @@ Format: [date] | component | what changed | why.
 
 ---
 
+## [2026-03-08] — NinjaTrader Data Pipeline
+
+### Added
+- `scripts/ninjatrader/CsvExporter.cs`: NinjaScript indicator that exports OHLCV for
+  all 9 instrument/timeframe combos (MNQ/MES/MGC x 1m/5m/15m) to CSV. Runs on a single
+  chart via `AddDataSeries()`. Backfills history on load, appends on each bar close.
+- `src/quant/data/ingest.py`: Ingestion module — reads NT CSV exports from staging folder,
+  validates (NaN rejection, column check), deduplicates by timestamp, detects weekday gaps
+  > 24h, appends new bars to `data/raw/`, clears LRU cache.
+- `src/quant/data/health.py`: Data health reporting — per-file freshness (fresh/stale/missing),
+  bar count, last timestamp, staleness in hours.
+- `scripts/ingest_data.py`: CLI wrapper for `make ingest`. Reads `STAGING_DIR` from `.env`.
+- `src/webapp/routes/api.py`: `GET /api/data/health` endpoint returns per-file status JSON.
+  `GET /api/data/health/html` returns HTML partial for HTMX. `POST /api/data/ingest`
+  triggers ingestion from staging folder.
+- `src/webapp/templates/partials/data_health.html`: Dashboard data health indicator
+  (green/yellow/red per file).
+- `src/webapp/templates/dashboard.html`: Added DATA HEALTH section with HTMX auto-refresh.
+- `src/webapp/templates/settings.html`: Added NT Ingestion button.
+- `src/config/settings.py`: Added `staging_dir` setting.
+- `Makefile`: Added `make ingest` target.
+- `tests/unit/test_ingest.py`: 10 tests for ingestion (new file, append, dedup, NaN, gaps).
+- `tests/unit/test_data_health.py`: 3 tests for health reporting.
+
+---
+
 ## [2026-03-07] — Pipeline Observability + Hardening
 
 ### Added
