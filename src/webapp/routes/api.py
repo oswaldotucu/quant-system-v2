@@ -98,6 +98,14 @@ def trigger_fetch(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/data/health")
+def data_health(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
+    """Return per-file data freshness and gap status."""
+    from quant.data.health import get_data_health
+
+    return {"files": get_data_health(cfg.data_dir)}
+
+
 # ---------------------------------------------------------------------------
 # Experiments
 # ---------------------------------------------------------------------------

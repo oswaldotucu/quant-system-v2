@@ -120,3 +120,10 @@ def test_approve_wrong_gate(client: TestClient) -> None:
     )
     response = client.post("/api/experiments/1/approve")
     assert response.status_code == 400
+
+
+def test_data_health_endpoint(client: TestClient) -> None:
+    response = client.get("/api/data/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert "files" in data
