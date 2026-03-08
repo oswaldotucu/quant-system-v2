@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     db_path: Path = Path("./data/db/quant_v2.db")
     pine_dir: Path = Path("./data/pine_scripts")
     checklist_dir: Path = Path("./data/checklists")
+    staging_dir: Path = Path("")  # NT export staging folder (empty = disabled)
 
     # -- IS/OOS date splits (DO NOT CHANGE after first use) -------------------
     is_start: str = "2020-01-01"
@@ -51,7 +52,7 @@ class Settings(BaseSettings):
     autostart_runner: bool = False
     poll_interval: int = 60  # seconds
 
-    @field_validator("data_dir", "pine_dir", "checklist_dir", mode="before")
+    @field_validator("data_dir", "pine_dir", "checklist_dir", "staging_dir", mode="before")
     @classmethod
     def resolve_path(cls, v: str | Path) -> Path:
         return Path(v)
