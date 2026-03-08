@@ -40,6 +40,17 @@
       <p class="text-xs text-gray-500 mt-2">Incremental update — only downloads new bars.</p>
     </div>
 
+    <!-- NT Ingestion -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 text-xs font-bold mb-3">NT INGESTION</h2>
+      <button hx-post="/api/data/ingest"
+              hx-swap="none"
+              class="px-3 py-2 bg-green-700 hover:bg-green-600 rounded text-sm w-full">
+        Ingest from NT Export
+      </button>
+      <p class="text-xs text-gray-500 mt-2">Reads new bars from staging folder into data/raw/.</p>
+    </div>
+
     <!-- Commission -->
     <div class="bg-gray-900 border border-gray-700 rounded p-4">
       <h2 class="text-gray-400 text-xs font-bold mb-3">COMMISSION</h2>

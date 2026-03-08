@@ -1,0 +1,19 @@
+<div class="grid grid-cols-3 gap-2">
+  {% for key, info in files.items() %}
+  <div class="flex items-center justify-between text-xs p-1.5 rounded
+              {% if info.status == 'fresh' %}bg-green-900/30 border border-green-800
+              {% elif info.status == 'stale' %}bg-yellow-900/30 border border-yellow-800
+              {% else %}bg-red-900/30 border border-red-800{% endif %}">
+    <span class="font-mono">{{ key }}</span>
+    <span>
+      {% if info.status == 'fresh' %}
+        <span class="text-green-400">{{ info.bars | default(0) }} bars</span>
+      {% elif info.status == 'stale' %}
+        <span class="text-yellow-400">{{ info.stale_hours | round(0) | int }}h stale</span>
+      {% else %}
+        <span class="text-red-400">missing</span>
+      {% endif %}
+    </span>
+  </div>
+  {% endfor %}
+</div>

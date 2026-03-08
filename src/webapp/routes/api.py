@@ -106,6 +106,46 @@ def data_health(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
     return {"files": get_data_health(cfg.data_dir)}
 
 
+@router.get("/data/health/html", response_class=HTMLResponse)
+def data_health_html(
+    request: Request,
+    cfg: Any = Depends(get_cfg),
+    templates: Jinja2Templates = Depends(get_templates),
+) -> HTMLResponse:
+    """Return data health as HTML fragment for HTMX."""
+    from quant.data.health import get_data_health
+
+    return templates.TemplateResponse(
+        "partials/data_health.html",
+        {"request": request, "files": get_data_health(cfg.data_dir)},
+    )
+
+
+@router.post("/data/ingest")
+def trigger_ingest(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
+    """Trigger NT CSV ingestion from staging folder."""
+    from quant.data.ingest import ingest
+
+    if not str(cfg.staging_dir) or str(cfg.staging_dir) == ".":
+        raise HTTPException(status_code=400, detail="STAGING_DIR not configured in .env")
+    if not cfg.staging_dir.exists():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Staging directory does not exist: {cfg.staging_dir}",
+        )
+
+    report = ingest(cfg.staging_dir, cfg.data_dir)
+    return {
+        "status": "ok",
+        "files_updated": report.files_updated,
+        "total_new_bars": report.total_new_bars,
+        "per_file": {
+            k: {"new_bars": fr.new_bars, "status": fr.status, "gaps": len(fr.gaps)}
+            for k, fr in report.per_file.items()
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # Experiments
 # ---------------------------------------------------------------------------

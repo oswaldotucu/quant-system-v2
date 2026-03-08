@@ -68,6 +68,17 @@
     </div>
   </div>
 
+    <!-- Data Health -->
+    <div class="bg-gray-900 border border-gray-700 rounded p-4">
+      <h2 class="text-gray-400 font-bold mb-2 text-xs">DATA HEALTH</h2>
+      <div id="data-health"
+           hx-get="/api/data/health/html"
+           hx-trigger="load, every 60s"
+           hx-swap="innerHTML">
+        <div class="text-gray-600 text-xs">Loading data health...</div>
+      </div>
+    </div>
+
   <!-- Log tail (SSE-updated) -->
   <div class="bg-gray-900 border border-gray-700 rounded p-4">
     <h2 class="text-gray-400 font-bold mb-2 text-xs">AUTOMATION LOG</h2>
