@@ -25,16 +25,25 @@ namespace NinjaTrader.NinjaScript.Indicators
     ///   datetime,open,high,low,close,volume
     ///   2024-01-02 18:00:00,16850.25,16855.00,16848.50,16852.75,142
     ///
-    /// Timestamps are in Eastern Time (NinjaTrader default for CME futures).
+    /// Timestamps are explicitly converted to US/Eastern regardless of
+    /// NinjaTrader's configured timezone.
     ///
-    /// NOTE: Update contract names (e.g., "MNQ 03-26") when contracts roll.
-    ///       For continuous contracts, use "MNQ 00-00" syntax instead.
+    /// Contracts are resolved dynamically using the current front-month
+    /// roll schedule — no manual updates needed on contract expiry.
     /// </summary>
     public class CsvExporter : Indicator
     {
         // Maps BarsInProgress index -> (ticker, timeframe, filename)
         private Dictionary<int, (string Ticker, string Timeframe, string Filename)> seriesMap;
         private HashSet<int> headerWritten;
+        private TimeZoneInfo easternZone;
+
+        // CME quarterly roll months for MNQ/MES (H=Mar, M=Jun, U=Sep, Z=Dec)
+        // CME bimonthly roll months for MGC (G=Feb, J=Apr, M=Jun, Q=Aug, V=Oct, Z=Dec)
+        private static readonly char[] ES_NQ_MONTHS = { 'H', 'M', 'U', 'Z' };
+        private static readonly int[]  ES_NQ_MONTH_NUMS = { 3, 6, 9, 12 };
+        private static readonly char[] GC_MONTHS = { 'G', 'J', 'M', 'Q', 'V', 'Z' };
+        private static readonly int[]  GC_MONTH_NUMS = { 2, 4, 6, 8, 10, 12 };
 
         [NinjaScriptProperty]
         [Display(Name = "Output Directory", Description = "Folder for CSV output",
@@ -55,25 +64,33 @@ namespace NinjaTrader.NinjaScript.Indicators
             {
                 seriesMap = new Dictionary<int, (string, string, string)>();
                 headerWritten = new HashSet<int>();
+                easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
+                // Resolve current front-month contracts dynamically
+                string mnqContract = GetFrontMonthContract("MNQ", false);
+                string mesContract = GetFrontMonthContract("MES", false);
+                string mgcContract = GetFrontMonthContract("MGC", true);
+
+                Print(string.Format("CsvExporter: MNQ={0}, MES={1}, MGC={2}",
+                    mnqContract, mesContract, mgcContract));
 
                 // The primary series (BarsInProgress=0) is whatever chart this
-                // indicator is added to. We add 8 more series below.
-                // BarsInProgress indices 1-8 correspond to the added series.
+                // indicator is added to. We add 9 more series below.
 
                 // MNQ
-                AddDataSeries("MNQ 03-26", BarsPeriodType.Minute, 1);   // idx 1
-                AddDataSeries("MNQ 03-26", BarsPeriodType.Minute, 5);   // idx 2
-                AddDataSeries("MNQ 03-26", BarsPeriodType.Minute, 15);  // idx 3
+                AddDataSeries(mnqContract, BarsPeriodType.Minute, 1);   // idx 1
+                AddDataSeries(mnqContract, BarsPeriodType.Minute, 5);   // idx 2
+                AddDataSeries(mnqContract, BarsPeriodType.Minute, 15);  // idx 3
 
                 // MES
-                AddDataSeries("MES 03-26", BarsPeriodType.Minute, 1);   // idx 4
-                AddDataSeries("MES 03-26", BarsPeriodType.Minute, 5);   // idx 5
-                AddDataSeries("MES 03-26", BarsPeriodType.Minute, 15);  // idx 6
+                AddDataSeries(mesContract, BarsPeriodType.Minute, 1);   // idx 4
+                AddDataSeries(mesContract, BarsPeriodType.Minute, 5);   // idx 5
+                AddDataSeries(mesContract, BarsPeriodType.Minute, 15);  // idx 6
 
                 // MGC
-                AddDataSeries("MGC 04-26", BarsPeriodType.Minute, 1);   // idx 7
-                AddDataSeries("MGC 04-26", BarsPeriodType.Minute, 5);   // idx 8
-                AddDataSeries("MGC 04-26", BarsPeriodType.Minute, 15);  // idx 9
+                AddDataSeries(mgcContract, BarsPeriodType.Minute, 1);   // idx 7
+                AddDataSeries(mgcContract, BarsPeriodType.Minute, 5);   // idx 8
+                AddDataSeries(mgcContract, BarsPeriodType.Minute, 15);  // idx 9
 
                 // Map indices to filenames
                 // NOTE: Index 0 is the primary chart series — we skip it
@@ -114,8 +131,11 @@ namespace NinjaTrader.NinjaScript.Indicators
                 headerWritten.Add(idx);
             }
 
-            // Format timestamp as YYYY-MM-DD HH:mm:ss (Eastern Time)
-            string timestamp = Times[idx][0].ToString("yyyy-MM-dd HH:mm:ss");
+            // Convert timestamp to US/Eastern regardless of NT's configured timezone
+            DateTime barTime = Times[idx][0];
+            DateTime easternTime = TimeZoneInfo.ConvertTime(barTime, easternZone);
+            string timestamp = easternTime.ToString("yyyy-MM-dd HH:mm:ss");
+
             string line = string.Format("{0},{1},{2},{3},{4},{5}\n",
                 timestamp,
                 Opens[idx][0],
@@ -125,6 +145,46 @@ namespace NinjaTrader.NinjaScript.Indicators
                 (long)Volumes[idx][0]);
 
             File.AppendAllText(filePath, line);
+        }
+
+        /// <summary>
+        /// Compute the current front-month contract name for a CME futures instrument.
+        ///
+        /// CME futures roll ~2 weeks before expiry (3rd Friday of contract month).
+        /// We use a 2-week buffer: if we're within 14 days of the contract month,
+        /// roll to the next contract.
+        ///
+        /// MNQ/MES: quarterly (H=Mar, M=Jun, U=Sep, Z=Dec)
+        /// MGC:     bimonthly (G=Feb, J=Apr, M=Jun, Q=Aug, V=Oct, Z=Dec)
+        /// </summary>
+        private string GetFrontMonthContract(string symbol, bool isGold)
+        {
+            DateTime now = DateTime.Now;
+            int[] monthNums = isGold ? GC_MONTH_NUMS : ES_NQ_MONTH_NUMS;
+            char[] monthCodes = isGold ? GC_MONTHS : ES_NQ_MONTHS;
+
+            for (int i = 0; i < monthNums.Length; i++)
+            {
+                int contractMonth = monthNums[i];
+                int contractYear = now.Year;
+
+                // Contract expiry is approximately 3rd Friday of the contract month.
+                // Roll 14 days before: if now < (contract month, day 1) we're safe;
+                // if now is in the contract month but before the 14th, still use it.
+                DateTime rollDate = new DateTime(contractYear, contractMonth, 14);
+
+                if (now < rollDate)
+                {
+                    // This contract is still active
+                    string yearStr = (contractYear % 100).ToString("D2");
+                    return string.Format("{0} {1}-{2}", symbol, monthCodes[i], yearStr);
+                }
+            }
+
+            // Past all contracts this year — use first contract of next year
+            int nextYear = now.Year + 1;
+            string nextYearStr = (nextYear % 100).ToString("D2");
+            return string.Format("{0} {1}-{2}", symbol, monthCodes[0], nextYearStr);
         }
     }
 }
