@@ -1,5 +1,5 @@
 .PHONY: install dev test test-regression test-slow test-all lint typecheck check \
-        format copy-data verify-data fetch-data docker-up docker-logs docker-down
+        format copy-data verify-data fetch-data ingest docker-up docker-logs docker-down
 
 install:
 	uv sync --all-extras
@@ -42,6 +42,13 @@ verify-data:
 
 fetch-data:
 	uv run python scripts/fetch_data.py
+
+ingest:
+ifdef STAGING
+	STAGING_DIR=$(STAGING) uv run python scripts/ingest_data.py
+else
+	uv run python scripts/ingest_data.py
+endif
 
 docker-up:
 	docker compose up -d --build
