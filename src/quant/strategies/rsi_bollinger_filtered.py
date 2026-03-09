@@ -24,7 +24,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.bollinger_squeeze import _sma, _rolling_std
+from quant.strategies.bollinger_squeeze import _rolling_std, _sma
 from quant.strategies.ema_rsi import _rsi
 from quant.strategies.indicators import atr_wilder
 

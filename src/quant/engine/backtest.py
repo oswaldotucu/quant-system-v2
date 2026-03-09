@@ -12,11 +12,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from config.instruments import COMMISSION_RT, CONTRACT_MULT
-from config.settings import get_settings
 from quant.engine.metrics import (
     BacktestResult,
     calmar,
@@ -27,13 +25,13 @@ from quant.engine.metrics import (
     sharpe,
     sortino,
     win_rate,
-    max_consecutive_losses,
 )
 
 log = logging.getLogger(__name__)
 
 try:
     import vectorbt as vbt
+
     _VBT_AVAILABLE = True
 except ImportError:
     _VBT_AVAILABLE = False
@@ -136,9 +134,19 @@ def run_backtest(
 
 def _empty_result() -> BacktestResult:
     return BacktestResult(
-        pf=0.0, trades=0, win_rate=0.0, sharpe=0.0, sortino=0.0,
-        calmar=0.0, max_dd_usd=0.0, max_dd_pct=0.0, daily_pnl=0.0,
-        trade_pnl=[], quarterly_wr={}, total_return_pct=0.0, avg_trade_duration=0.0,
+        pf=0.0,
+        trades=0,
+        win_rate=0.0,
+        sharpe=0.0,
+        sortino=0.0,
+        calmar=0.0,
+        max_dd_usd=0.0,
+        max_dd_pct=0.0,
+        daily_pnl=0.0,
+        trade_pnl=[],
+        quarterly_wr={},
+        total_return_pct=0.0,
+        avg_trade_duration=0.0,
     )
 
 

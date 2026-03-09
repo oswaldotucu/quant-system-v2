@@ -88,13 +88,16 @@ class TestEmptyData:
 
     def test_empty_data(self) -> None:
         """Tiny input (fewer bars than bb_period) returns zero arrays."""
-        tiny = pd.DataFrame({
-            "open": [100.0, 101.0, 102.0],
-            "high": [101.0, 102.0, 103.0],
-            "low": [99.0, 100.0, 101.0],
-            "close": [100.5, 101.5, 102.5],
-            "volume": [1000, 1000, 1000],
-        }, index=pd.date_range("2023-01-01", periods=3, freq="15min"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0, 101.0, 102.0],
+                "high": [101.0, 102.0, 103.0],
+                "low": [99.0, 100.0, 101.0],
+                "close": [100.5, 101.5, 102.5],
+                "volume": [1000, 1000, 1000],
+            },
+            index=pd.date_range("2023-01-01", periods=3, freq="15min"),
+        )
 
         params = BollingerSqueezeStrategy.default_params()
         entries, exits, direction = BollingerSqueezeStrategy.generate(tiny, params)
@@ -108,13 +111,16 @@ class TestEmptyData:
 
     def test_single_bar(self) -> None:
         """Single bar should not crash."""
-        single = pd.DataFrame({
-            "open": [100.0],
-            "high": [101.0],
-            "low": [99.0],
-            "close": [100.5],
-            "volume": [1000],
-        }, index=pd.date_range("2023-01-01", periods=1, freq="15min"))
+        single = pd.DataFrame(
+            {
+                "open": [100.0],
+                "high": [101.0],
+                "low": [99.0],
+                "close": [100.5],
+                "volume": [1000],
+            },
+            index=pd.date_range("2023-01-01", periods=1, freq="15min"),
+        )
 
         params = BollingerSqueezeStrategy.default_params()
         entries, exits, direction = BollingerSqueezeStrategy.generate(single, params)
@@ -129,8 +135,12 @@ class TestDefaultParams:
     def test_has_all_required_keys(self) -> None:
         params = BollingerSqueezeStrategy.default_params()
         required = {
-            "bb_period", "bb_std", "squeeze_threshold",
-            "squeeze_lookback", "tp_pct", "sl_pct",
+            "bb_period",
+            "bb_std",
+            "squeeze_threshold",
+            "squeeze_lookback",
+            "tp_pct",
+            "sl_pct",
         }
         assert set(params.keys()) == required
 

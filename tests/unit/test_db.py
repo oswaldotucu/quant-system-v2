@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from db.connection import apply_schema, _open_connection
+from db.connection import _open_connection, apply_schema
 
 
 def test_schema_applies_cleanly(tmp_path: Path) -> None:
@@ -64,8 +64,9 @@ def test_seed_and_get_experiment(tmp_path: Path) -> None:
     )
     conn.commit()
 
-    from db.queries import seed_experiment, get_experiment
     import os
+
+    from db.queries import get_experiment, seed_experiment
 
     os.environ["DB_PATH"] = str(db)
 
@@ -95,14 +96,16 @@ def test_advance_experiment_with_trade_pnl(tmp_path: Path) -> None:
     )
     conn.commit()
 
-    from db.queries import seed_experiment, advance_experiment, load_trade_pnl
     import json
+
+    from db.queries import advance_experiment, load_trade_pnl, seed_experiment
 
     exp_id = seed_experiment("ema_rsi", "MNQ", "15m", conn=conn)
 
     pnl = [100.0, -50.0, 200.0, -30.0, 150.0]
     advance_experiment(
-        exp_id, "IS_OPT",
+        exp_id,
+        "IS_OPT",
         updates={"trade_pnl": json.dumps(pnl)},
         conn=conn,
     )
@@ -133,13 +136,14 @@ def test_advance_experiment_rejects_invalid_columns(tmp_path: Path) -> None:
     )
     conn.commit()
 
-    from db.queries import seed_experiment, advance_experiment
+    from db.queries import advance_experiment, seed_experiment
 
     exp_id = seed_experiment("ema_rsi", "MNQ", "15m", conn=conn)
 
     with pytest.raises(ValueError, match="Invalid update columns"):
         advance_experiment(
-            exp_id, "IS_OPT",
+            exp_id,
+            "IS_OPT",
             updates={"malicious_column": "DROP TABLE"},
             conn=conn,
         )

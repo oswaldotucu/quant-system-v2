@@ -75,13 +75,16 @@ class TestEmptyData:
         n = entry_period - 1
         rng = np.random.default_rng(seed=99)
         idx = pd.date_range("2020-01-01", periods=n, freq="15min", tz="America/New_York")
-        data = pd.DataFrame({
-            "open": rng.normal(15000, 10, n),
-            "high": rng.normal(15010, 10, n),
-            "low": rng.normal(14990, 10, n),
-            "close": rng.normal(15000, 10, n),
-            "volume": rng.integers(100, 5000, n),
-        }, index=idx)
+        data = pd.DataFrame(
+            {
+                "open": rng.normal(15000, 10, n),
+                "high": rng.normal(15010, 10, n),
+                "low": rng.normal(14990, 10, n),
+                "close": rng.normal(15000, 10, n),
+                "volume": rng.integers(100, 5000, n),
+            },
+            index=idx,
+        )
 
         entries, exits, direction = DonchianBreakoutStrategy.generate(data, params)
 
@@ -93,10 +96,16 @@ class TestEmptyData:
     def test_single_bar(self) -> None:
         """Single bar of data should return zero arrays without error."""
         idx = pd.date_range("2020-01-01", periods=1, freq="15min", tz="America/New_York")
-        data = pd.DataFrame({
-            "open": [15000.0], "high": [15010.0], "low": [14990.0],
-            "close": [15000.0], "volume": [1000],
-        }, index=idx)
+        data = pd.DataFrame(
+            {
+                "open": [15000.0],
+                "high": [15010.0],
+                "low": [14990.0],
+                "close": [15000.0],
+                "volume": [1000],
+            },
+            index=idx,
+        )
         params = DonchianBreakoutStrategy.default_params()
 
         entries, exits, direction = DonchianBreakoutStrategy.generate(data, params)
@@ -115,9 +124,7 @@ class TestTrendFilterReducesSignals:
         params_with_filter = DonchianBreakoutStrategy.default_params()
         params_with_filter["use_trend_filter"] = 1
 
-        entries_no_filter, _, _ = DonchianBreakoutStrategy.generate(
-            sample_ohlcv, params_no_filter
-        )
+        entries_no_filter, _, _ = DonchianBreakoutStrategy.generate(sample_ohlcv, params_no_filter)
         entries_with_filter, _, _ = DonchianBreakoutStrategy.generate(
             sample_ohlcv, params_with_filter
         )

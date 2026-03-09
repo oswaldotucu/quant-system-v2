@@ -69,8 +69,7 @@ def test_ema_rsi_engine_sanity(ticker: str) -> None:
         f"Expected >= 50. Engine or data may be broken."
     )
     assert result.pf > 1.0, (
-        f"ema_rsi {ticker} 15m: OOS PF={result.pf:.3f} < 1.0. "
-        f"Engine or data may be broken."
+        f"ema_rsi {ticker} 15m: OOS PF={result.pf:.3f} < 1.0. Engine or data may be broken."
     )
 
 

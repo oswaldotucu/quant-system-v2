@@ -39,8 +39,8 @@ class BollingerSqueezeStrategy:
             "bb_std": 2.0,
             "squeeze_threshold": 0.02,
             "squeeze_lookback": 5,
-            "tp_pct": 0.15,   # ~37 pts MNQ, ~9 pts MES (intraday scale)
-            "sl_pct": 0.3,    # 2:1 risk vs TP
+            "tp_pct": 0.15,  # ~37 pts MNQ, ~9 pts MES (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -70,7 +70,9 @@ class BollingerSqueezeStrategy:
         if n < min_bars:
             log.warning(
                 "Insufficient bars (%d) for bb_period=%d + squeeze_lookback=%d",
-                n, bb_period, squeeze_lookback,
+                n,
+                bb_period,
+                squeeze_lookback,
             )
             zeros = np.zeros(n, dtype=bool)
             return zeros.copy(), zeros.copy(), zeros.copy()
@@ -124,6 +126,7 @@ class BollingerSqueezeStrategy:
 # ---------------------------------------------------------------------------
 # Internal helper functions (pure numpy, no pandas)
 # ---------------------------------------------------------------------------
+
 
 def _sma(arr: np.ndarray, period: int) -> np.ndarray:
     """Simple moving average. First (period-1) values are NaN-filled with 0."""

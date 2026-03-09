@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from config.instruments import ticker_data_dir
 from config.settings import get_settings
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,8 @@ def load_ohlcv(ticker: str, timeframe: str, data_dir: Path | None = None) -> pd.
     if data_dir is None:
         data_dir = get_settings().data_dir
 
-    path = Path(data_dir) / f"{ticker}_{timeframe}.csv"
+    resolved_dir = Path(ticker_data_dir(ticker, data_dir))
+    path = resolved_dir / f"{ticker}_{timeframe}.csv"
     if not path.exists():
         raise FileNotFoundError(
             f"CSV not found: {path}. Run 'make copy-data' to populate data/raw/."
@@ -55,15 +57,19 @@ def load_ohlcv(ticker: str, timeframe: str, data_dir: Path | None = None) -> pd.
     # Source CSVs store timestamps in ET already (CME session open = 18:00 ET).
     # Localize directly as ET; do NOT treat as UTC first.
     if df.index.tz is None:
-        df.index = df.index.tz_localize(
-            "America/New_York", ambiguous="NaT", nonexistent="NaT"
-        )
-        df = df[df.index.notna()]   # drop any DST fold/gap rows
+        df.index = df.index.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT")
+        df = df[df.index.notna()]  # drop any DST fold/gap rows
     else:
         df.index = df.index.tz_convert("America/New_York")
 
     df.sort_index(inplace=True)
 
-    log.debug("Loaded %s %s: %d rows (%s to %s)", ticker, timeframe, len(df),
-              df.index[0].date(), df.index[-1].date())
+    log.debug(
+        "Loaded %s %s: %d rows (%s to %s)",
+        ticker,
+        timeframe,
+        len(df),
+        df.index[0].date(),
+        df.index[-1].date(),
+    )
     return df

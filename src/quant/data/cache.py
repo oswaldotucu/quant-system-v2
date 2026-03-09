@@ -26,6 +26,7 @@ def get_ohlcv(ticker: str, timeframe: str, data_dir: Path | None = None) -> pd.D
     This is the preferred entry point for all backtest code.
     """
     from config.settings import get_settings
+
     if data_dir is None:
         data_dir = get_settings().data_dir
     return cached_ohlcv(ticker, timeframe, str(data_dir))

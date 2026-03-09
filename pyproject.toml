@@ -52,7 +52,13 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A"]
 # ANN = type annotations, S = security, B = bugbear
-ignore = ["ANN101", "ANN102"]
+ignore = [
+    "B008",   # Depends() in defaults — idiomatic FastAPI
+    "ANN401", # Any in signatures — Strategy Protocol + FastAPI deps
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S108"]  # assert + /tmp paths fine in tests
 
 [tool.pyright]
 pythonVersion = "3.12"

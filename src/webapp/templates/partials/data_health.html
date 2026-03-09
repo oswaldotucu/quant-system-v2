@@ -1,19 +1,46 @@
-<div class="grid grid-cols-3 gap-2">
-  {% for key, info in files.items() %}
-  <div class="flex items-center justify-between text-xs p-1.5 rounded
-              {% if info.status == 'fresh' %}bg-green-900/30 border border-green-800
-              {% elif info.status == 'stale' %}bg-yellow-900/30 border border-yellow-800
-              {% else %}bg-red-900/30 border border-red-800{% endif %}">
-    <span class="font-mono">{{ key }}</span>
-    <span>
-      {% if info.status == 'fresh' %}
-        <span class="text-green-400">{{ info.bars | default(0) }} bars</span>
-      {% elif info.status == 'stale' %}
-        <span class="text-yellow-400">{{ info.stale_hours | round(0) | int }}h stale</span>
-      {% else %}
-        <span class="text-red-400">missing</span>
-      {% endif %}
-    </span>
+{% set micro_keys = [] %}
+{% set mini_keys = [] %}
+{% for key in files %}
+  {% if key.startswith('M') %}
+    {% if micro_keys.append(key) %}{% endif %}
+  {% else %}
+    {% if mini_keys.append(key) %}{% endif %}
+  {% endif %}
+{% endfor %}
+
+{% macro health_badge(key, info) %}
+<div class="flex items-center justify-between text-xs p-1.5 rounded
+            {% if info.status == 'fresh' %}bg-green-900/30 border border-green-800
+            {% elif info.status == 'stale' %}bg-yellow-900/30 border border-yellow-800
+            {% else %}bg-red-900/30 border border-red-800{% endif %}">
+  <span class="font-mono">{{ key }}</span>
+  <span>
+    {% if info.status == 'fresh' %}
+      <span class="text-green-400">{{ info.bars | default(0) }} bars</span>
+    {% elif info.status == 'stale' %}
+      <span class="text-yellow-400">{{ info.stale_hours | round(0) | int }}h stale</span>
+    {% else %}
+      <span class="text-red-400">missing</span>
+    {% endif %}
+  </span>
+</div>
+{% endmacro %}
+
+<div class="space-y-3">
+  <div>
+    <div class="text-xs text-gray-400 mb-1 font-semibold">MICRO</div>
+    <div class="grid grid-cols-3 gap-2">
+      {% for key in micro_keys %}
+        {{ health_badge(key, files[key]) }}
+      {% endfor %}
+    </div>
   </div>
-  {% endfor %}
+  <div>
+    <div class="text-xs text-gray-400 mb-1 font-semibold">MINI</div>
+    <div class="grid grid-cols-3 gap-2">
+      {% for key in mini_keys %}
+        {{ health_badge(key, files[key]) }}
+      {% endfor %}
+    </div>
+  </div>
 </div>

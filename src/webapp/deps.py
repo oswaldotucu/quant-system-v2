@@ -6,7 +6,6 @@ No direct imports of singletons in route handlers.
 
 from __future__ import annotations
 
-import queue
 from typing import Any
 
 from fastapi import Request

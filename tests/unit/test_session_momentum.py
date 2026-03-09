@@ -37,23 +37,29 @@ class TestDirectionMatchesEntries:
 class TestSessionLogic:
     def test_no_signals_outside_trade_window(self) -> None:
         """Signals should only appear within trade_window after range_bars."""
-        idx = pd.date_range(
-            "2023-06-01 09:00", periods=40, freq="15min", tz="America/New_York"
-        )
+        idx = pd.date_range("2023-06-01 09:00", periods=40, freq="15min", tz="America/New_York")
         rng = np.random.default_rng(seed=99)
         close = 100 + np.cumsum(rng.normal(0, 0.5, 40))
         high = close + rng.uniform(0, 0.3, 40)
         low = close - rng.uniform(0, 0.3, 40)
 
-        data = pd.DataFrame({
-            "open": close + rng.normal(0, 0.1, 40),
-            "high": high, "low": low, "close": close,
-            "volume": rng.integers(100, 1000, 40),
-        }, index=idx)
+        data = pd.DataFrame(
+            {
+                "open": close + rng.normal(0, 0.1, 40),
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": rng.integers(100, 1000, 40),
+            },
+            index=idx,
+        )
 
         params = {
-            "range_bars": 2, "trade_window": 4,
-            "min_range_pct": 0.0, "tp_pct": 0.15, "sl_pct": 0.3,
+            "range_bars": 2,
+            "trade_window": 4,
+            "min_range_pct": 0.0,
+            "tp_pct": 0.15,
+            "sl_pct": 0.3,
         }
         entries, _, _ = SessionMomentumStrategy.generate(data, params)
 
@@ -64,24 +70,33 @@ class TestSessionLogic:
 
 class TestEdgeCases:
     def test_empty_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0], "high": [101.0], "low": [99.0],
-            "close": [100.5], "volume": [1000],
-        }, index=pd.date_range("2023-01-01", periods=1, freq="15min",
-                               tz="America/New_York"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0],
+                "high": [101.0],
+                "low": [99.0],
+                "close": [100.5],
+                "volume": [1000],
+            },
+            index=pd.date_range("2023-01-01", periods=1, freq="15min", tz="America/New_York"),
+        )
         params = SessionMomentumStrategy.default_params()
         entries, _, _ = SessionMomentumStrategy.generate(tiny, params)
         assert entries.sum() == 0
 
     def test_no_rth_sessions(self) -> None:
         """Data that doesn't include 9:30 ET should produce zero signals."""
-        idx = pd.date_range(
-            "2023-01-01 14:00", periods=20, freq="15min", tz="America/New_York"
+        idx = pd.date_range("2023-01-01 14:00", periods=20, freq="15min", tz="America/New_York")
+        data = pd.DataFrame(
+            {
+                "open": [100.0] * 20,
+                "high": [101.0] * 20,
+                "low": [99.0] * 20,
+                "close": [100.5] * 20,
+                "volume": [1000] * 20,
+            },
+            index=idx,
         )
-        data = pd.DataFrame({
-            "open": [100.0] * 20, "high": [101.0] * 20, "low": [99.0] * 20,
-            "close": [100.5] * 20, "volume": [1000] * 20,
-        }, index=idx)
         params = SessionMomentumStrategy.default_params()
         entries, _, _ = SessionMomentumStrategy.generate(data, params)
         assert entries.sum() == 0

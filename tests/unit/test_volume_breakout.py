@@ -47,27 +47,37 @@ class TestDirectionMatchesEntries:
 
         entry_mask = entries & ~np.isnan(avg_vol)
         if entry_mask.sum() > 0:
-            assert np.all(
-                volume[entry_mask] > params["vol_multiplier"] * avg_vol[entry_mask]
-            )
+            assert np.all(volume[entry_mask] > params["vol_multiplier"] * avg_vol[entry_mask])
 
 
 class TestEdgeCases:
     def test_empty_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0], "high": [101.0], "low": [99.0],
-            "close": [100.5], "volume": [1000],
-        }, index=pd.date_range("2023-01-01", periods=1, freq="15min"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0],
+                "high": [101.0],
+                "low": [99.0],
+                "close": [100.5],
+                "volume": [1000],
+            },
+            index=pd.date_range("2023-01-01", periods=1, freq="15min"),
+        )
         params = VolumeBreakoutStrategy.default_params()
         entries, exits, direction = VolumeBreakoutStrategy.generate(tiny, params)
         assert entries.shape == (1,)
         assert entries.sum() == 0
 
     def test_short_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0] * 5, "high": [101.0] * 5, "low": [99.0] * 5,
-            "close": [100.5] * 5, "volume": [1000] * 5,
-        }, index=pd.date_range("2023-01-01", periods=5, freq="15min"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0] * 5,
+                "high": [101.0] * 5,
+                "low": [99.0] * 5,
+                "close": [100.5] * 5,
+                "volume": [1000] * 5,
+            },
+            index=pd.date_range("2023-01-01", periods=5, freq="15min"),
+        )
         params = VolumeBreakoutStrategy.default_params()
         entries, _, _ = VolumeBreakoutStrategy.generate(tiny, params)
         assert entries.sum() == 0

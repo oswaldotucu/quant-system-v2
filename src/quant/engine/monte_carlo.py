@@ -21,12 +21,12 @@ RUIN_THRESHOLD = -0.30  # -30% drawdown = ruin event (as fraction of initial cap
 
 @dataclass(frozen=True)
 class MCResult:
-    p_ruin: float       # P(cumsum hits RUIN_THRESHOLD at any point in simulation)
-    p_positive: float   # P(total sum > 0 at end of simulation)
+    p_ruin: float  # P(cumsum hits RUIN_THRESHOLD at any point in simulation)
+    p_positive: float  # P(total sum > 0 at end of simulation)
     n_simulations: int
     median_return: float
-    pct_5: float        # 5th percentile return (downside scenario)
-    pct_95: float       # 95th percentile return (upside scenario)
+    pct_5: float  # 5th percentile return (downside scenario)
+    pct_95: float  # 95th percentile return (upside scenario)
 
 
 def monte_carlo(

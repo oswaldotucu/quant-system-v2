@@ -51,22 +51,32 @@ class TestDirectionMatchesEntries:
 
 class TestEdgeCases:
     def test_empty_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0], "high": [101.0], "low": [99.0],
-            "close": [100.5], "volume": [1000],
-        }, index=pd.date_range("2023-01-01", periods=1, freq="15min",
-                               tz="America/New_York"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0],
+                "high": [101.0],
+                "low": [99.0],
+                "close": [100.5],
+                "volume": [1000],
+            },
+            index=pd.date_range("2023-01-01", periods=1, freq="15min", tz="America/New_York"),
+        )
         params = MtfEmaAlignmentStrategy.default_params()
         entries, exits, direction = MtfEmaAlignmentStrategy.generate(tiny, params)
         assert entries.shape == (1,)
         assert entries.sum() == 0
 
     def test_short_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0] * 10, "high": [101.0] * 10, "low": [99.0] * 10,
-            "close": [100.5] * 10, "volume": [1000] * 10,
-        }, index=pd.date_range("2023-01-01", periods=10, freq="15min",
-                               tz="America/New_York"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0] * 10,
+                "high": [101.0] * 10,
+                "low": [99.0] * 10,
+                "close": [100.5] * 10,
+                "volume": [1000] * 10,
+            },
+            index=pd.date_range("2023-01-01", periods=10, freq="15min", tz="America/New_York"),
+        )
         params = MtfEmaAlignmentStrategy.default_params()
         entries, _, _ = MtfEmaAlignmentStrategy.generate(tiny, params)
         assert entries.sum() == 0

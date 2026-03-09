@@ -95,7 +95,7 @@ def trigger_fetch(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
         }
     except Exception as e:
         log.error("Data fetch failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/data/health")
@@ -174,10 +174,17 @@ async def list_experiments_api(gate: str | None = None) -> dict[str, Any]:
     }
 
 
-_LEADERBOARD_SORT_FIELDS = frozenset({
-    "oos_pf", "oos_trades", "oos_sharpe", "oos_sortino", "oos_calmar",
-    "daily_pnl", "oos_max_dd_pct",
-})
+_LEADERBOARD_SORT_FIELDS = frozenset(
+    {
+        "oos_pf",
+        "oos_trades",
+        "oos_sharpe",
+        "oos_sortino",
+        "oos_calmar",
+        "daily_pnl",
+        "oos_max_dd_pct",
+    }
+)
 
 
 @router.get("/leaderboard")
@@ -187,8 +194,7 @@ async def leaderboard_api(sort_by: str = "oos_pf") -> dict[str, Any]:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Invalid sort_by '{sort_by}'. "
-                f"Must be one of {sorted(_LEADERBOARD_SORT_FIELDS)}"
+                f"Invalid sort_by '{sort_by}'. Must be one of {sorted(_LEADERBOARD_SORT_FIELDS)}"
             ),
         )
     experiments = list_experiments_past_gate("OOS_VAL")
@@ -270,7 +276,7 @@ async def seed_experiments(
         }
     except Exception as e:
         log.error("Seed failed: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/strategies")
@@ -324,7 +330,7 @@ def run_lab_backtest(
         )
     except Exception as e:
         log.error("Lab backtest failed: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ---------------------------------------------------------------------------

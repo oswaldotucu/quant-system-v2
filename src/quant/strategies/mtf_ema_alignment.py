@@ -78,13 +78,15 @@ class MtfEmaAlignmentStrategy:
 
         # Slope: current 1h EMA > previous 1h EMA
         htf_slope = pd.Series(np.zeros(len(htf_ema_vals)), index=htf_close.index)
-        htf_slope.iloc[1:] = np.where(
-            htf_ema_vals[1:] > htf_ema_vals[:-1], 1.0, -1.0
-        )
+        htf_slope.iloc[1:] = np.where(htf_ema_vals[1:] > htf_ema_vals[:-1], 1.0, -1.0)
 
-        # Forward-fill to 15m index
-        htf_ema_15m = htf_ema_series.reindex(data.index, method="ffill")
-        htf_slope_15m = htf_slope.reindex(data.index, method="ffill")
+        # Shift by 1 hour before forward-filling to 15m index.
+        # Without shift, resample("1h").last() labels the [10:00,11:00) bin
+        # at 10:00 using the 10:45 close — giving 10:00/10:15/10:30 bars
+        # access to future data (look-ahead bias). Shifting ensures each
+        # hour's EMA is only visible after the hour fully closes.
+        _htf_ema_15m = htf_ema_series.shift(1).reindex(data.index, method="ffill")  # noqa: F841
+        htf_slope_15m = htf_slope.shift(1).reindex(data.index, method="ffill")
 
         slope_up = htf_slope_15m.values > 0
         slope_down = htf_slope_15m.values < 0

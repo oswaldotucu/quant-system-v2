@@ -8,7 +8,7 @@ from typing import Any
 
 import pandas as pd
 
-from config.instruments import TICKERS, TIMEFRAMES
+from config.instruments import TICKER_CLASS, TICKERS, TIMEFRAMES
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def get_data_health(data_dir: Path) -> dict[str, dict[str, Any]]:
     for ticker in TICKERS:
         for tf in TIMEFRAMES:
             key = f"{ticker}_{tf}"
-            path = data_dir / f"{key}.csv"
+            path = data_dir / TICKER_CLASS[ticker] / f"{key}.csv"
 
             if not path.exists():
                 health[key] = {

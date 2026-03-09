@@ -61,15 +61,23 @@ class EventBus:
         status: str,
         **kwargs: Any,
     ) -> None:
-        self.emit({"type": "gate_progress", "exp_id": exp_id, "gate": gate,
-                   "status": status, **kwargs})
+        self.emit(
+            {"type": "gate_progress", "exp_id": exp_id, "gate": gate, "status": status, **kwargs}
+        )
 
     def emit_gate_error(self, exp_id: int, gate: str, error: str) -> None:
         self.emit({"type": "gate_error", "exp_id": exp_id, "gate": gate, "error": error})
 
     def emit_fwd_ready(self, exp_id: int, strategy: str, ticker: str, oos_pf: float) -> None:
-        self.emit({"type": "fwd_ready", "exp_id": exp_id, "strategy": strategy,
-                   "ticker": ticker, "oos_pf": oos_pf})
+        self.emit(
+            {
+                "type": "fwd_ready",
+                "exp_id": exp_id,
+                "strategy": strategy,
+                "ticker": ticker,
+                "oos_pf": oos_pf,
+            }
+        )
 
 
 def notify_macos(title: str, message: str) -> None:
@@ -78,7 +86,7 @@ def notify_macos(title: str, message: str) -> None:
         safe_title = title.replace("\\", "\\\\").replace('"', '\\"')
         safe_message = message.replace("\\", "\\\\").replace('"', '\\"')
         script = f'display notification "{safe_message}" with title "{safe_title}"'
-        subprocess.run(["osascript", "-e", script], timeout=2, capture_output=True)
+        subprocess.run(["osascript", "-e", script], timeout=2, capture_output=True)  # noqa: S603, S607
     except Exception as e:
         log.warning("macOS notification failed: %s", e)
 

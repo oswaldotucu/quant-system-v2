@@ -9,7 +9,6 @@ RULE: Never expose magic numbers. All thresholds are in config/settings.py.
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from dataclasses import dataclass
 
 import numpy as np
@@ -19,6 +18,7 @@ import pandas as pd
 @dataclass(frozen=True)
 class BacktestResult:
     """Immutable result of a single backtest run."""
+
     pf: float
     trades: int
     win_rate: float
@@ -27,8 +27,8 @@ class BacktestResult:
     calmar: float
     max_dd_usd: float
     max_dd_pct: float
-    daily_pnl: float           # average $/day net of commission
-    trade_pnl: list[float]     # individual trade P&Ls for Monte Carlo
+    daily_pnl: float  # average $/day net of commission
+    trade_pnl: list[float]  # individual trade P&Ls for Monte Carlo
     quarterly_wr: dict[str, float]
     total_return_pct: float
     avg_trade_duration: float  # in bars

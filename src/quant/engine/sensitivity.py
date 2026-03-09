@@ -77,22 +77,27 @@ def parameter_sensitivity(
             nudged = {**best_params, param_name: new_val}
             try:
                 r = run_backtest(strategy, oos_data, nudged, ticker)
-                neighbors.append(NeighborResult(
-                    param_name=param_name,
-                    delta=delta,
-                    params=nudged,
-                    pf=r.pf,
-                ))
+                neighbors.append(
+                    NeighborResult(
+                        param_name=param_name,
+                        delta=delta,
+                        params=nudged,
+                        pf=r.pf,
+                    )
+                )
             except Exception as e:
                 log.error("Sensitivity %s=%s failed: %s", param_name, new_val, e)
-                neighbors.append(NeighborResult(
-                    param_name=param_name, delta=delta, params=nudged, pf=0.0
-                ))
+                neighbors.append(
+                    NeighborResult(param_name=param_name, delta=delta, params=nudged, pf=0.0)
+                )
 
     if not neighbors:
         return SensResult(
-            base_pf=base_pf, min_neighbor_pf=base_pf, max_pf_drop=0.0,
-            neighbors=[], passed=True,
+            base_pf=base_pf,
+            min_neighbor_pf=base_pf,
+            max_pf_drop=0.0,
+            neighbors=[],
+            passed=True,
         )
 
     pfs = [n.pf for n in neighbors]

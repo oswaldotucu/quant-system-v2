@@ -8,7 +8,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from quant.data.splitter import is_train, is_val, is_full, oos, validate_no_oos_leak
+from quant.data.splitter import is_full, is_train, is_val, oos, validate_no_oos_leak
 
 
 def _make_data() -> pd.DataFrame:

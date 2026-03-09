@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config.instruments import TICKERS, TIMEFRAMES
+from config.instruments import TICKER_CLASS, TICKERS, TIMEFRAMES
 from quant.data.cache import clear_cache
 
 log = logging.getLogger(__name__)
@@ -67,12 +67,16 @@ def ingest_file(
         FileReport with new_bars, rejected_bars, gaps, status
     """
     filename = f"{ticker}_{timeframe}.csv"
-    staging_path = staging_dir / filename
-    target_path = data_dir / filename
+    ticker_cls = TICKER_CLASS[ticker]
+    staging_path = staging_dir / ticker_cls / filename
+    target_dir = data_dir / ticker_cls
+    target_path = target_dir / filename
 
     if not staging_path.exists():
         return FileReport(
-            new_bars=0, rejected_bars=0, status="error",
+            new_bars=0,
+            rejected_bars=0,
+            status="error",
             error=f"Staging file not found: {staging_path}",
         )
 
@@ -88,7 +92,9 @@ def ingest_file(
     missing = set(OHLCV_COLS) - set(staging_df.columns)
     if missing:
         return FileReport(
-            new_bars=0, rejected_bars=0, status="error",
+            new_bars=0,
+            rejected_bars=0,
+            status="error",
             error=f"Missing columns in staging: {missing}",
         )
 
@@ -160,7 +166,10 @@ def ingest_file(
             gaps.append(gap)
             log.warning(
                 "%s: gap of %.1fh between %s and %s",
-                filename, gap_hours, last_existing_ts, first_new_ts,
+                filename,
+                gap_hours,
+                last_existing_ts,
+                first_new_ts,
             )
 
     # Merge: append new bars to existing
@@ -171,7 +180,7 @@ def ingest_file(
         merged.sort_index(inplace=True)
     else:
         merged = new_bars_df
-        data_dir.mkdir(parents=True, exist_ok=True)
+        target_dir.mkdir(parents=True, exist_ok=True)
 
     merged.to_csv(target_path, index_label="datetime")
 
@@ -213,7 +222,8 @@ def ingest(staging_dir: Path, data_dir: Path) -> IngestReport:
         clear_cache()
         log.info(
             "Ingestion complete: %d files updated, %d new bars total",
-            report.files_updated, report.total_new_bars,
+            report.files_updated,
+            report.total_new_bars,
         )
     else:
         log.info("Ingestion complete: no new data")

@@ -33,7 +33,9 @@ def sample_ohlcv() -> pd.DataFrame:
     Used in unit tests that need data WITHOUT touching real CSVs.
     """
     rng = np.random.default_rng(seed=42)
-    n_bars = 78_000  # ~6 years at 15min (26 bars/day * 250 days * 6 years = 39K; use more for safety)
+    n_bars = (
+        78_000  # ~6 years at 15min (26 bars/day * 250 days * 6 years = 39K; use more for safety)
+    )
 
     # Random walk price series
     returns = rng.normal(0.00005, 0.001, n_bars)  # 0.1% avg bar volatility
@@ -45,9 +47,9 @@ def sample_ohlcv() -> pd.DataFrame:
 
     idx = pd.date_range("2020-01-01", periods=n_bars, freq="15min", tz="America/New_York")
 
-    return pd.DataFrame({
-        "open": open_, "high": high, "low": low, "close": close, "volume": volume
-    }, index=idx)
+    return pd.DataFrame(
+        {"open": open_, "high": high, "low": low, "close": close, "volume": volume}, index=idx
+    )
 
 
 @pytest.fixture
@@ -68,6 +70,7 @@ def ema_rsi_params() -> dict[str, Any]:
 def tmp_db(tmp_path: Path) -> Path:
     """Fresh SQLite DB in temp dir with schema applied."""
     from db.connection import apply_schema
+
     db_path = tmp_path / "test.db"
     apply_schema(db_path)
     return db_path
@@ -77,6 +80,7 @@ def tmp_db(tmp_path: Path) -> Path:
 def test_settings(tmp_path: Path) -> Any:
     """Settings with all paths pointed at tmp_path."""
     from config.settings import Settings
+
     return Settings(
         data_dir=tmp_path / "raw",
         db_path=tmp_path / "test.db",

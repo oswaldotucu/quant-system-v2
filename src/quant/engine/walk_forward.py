@@ -68,30 +68,41 @@ def walk_forward(
     """
     window_results: list[WFWindow] = []
 
-    for is_start, is_end, oos_start, oos_end in WF_WINDOWS:
+    for _is_start, _is_end, oos_start, oos_end in WF_WINDOWS:
         oos_slice = data.loc[oos_start:oos_end]
 
         if len(oos_slice) < 50:
-            log.warning("Walk-forward window %s-%s has only %d bars -- skipping",
-                        oos_start, oos_end, len(oos_slice))
+            log.warning(
+                "Walk-forward window %s-%s has only %d bars -- skipping",
+                oos_start,
+                oos_end,
+                len(oos_slice),
+            )
             continue
 
         try:
             result = run_backtest(strategy, oos_slice, params, ticker)
-            profitable = (result.pf > 1.0 and result.trades >= MIN_TRADES_PER_WINDOW)
-            window_results.append(WFWindow(
-                oos_start=oos_start,
-                oos_end=oos_end,
-                pf=result.pf,
-                trades=result.trades,
-                profitable=profitable,
-            ))
+            profitable = result.pf > 1.0 and result.trades >= MIN_TRADES_PER_WINDOW
+            window_results.append(
+                WFWindow(
+                    oos_start=oos_start,
+                    oos_end=oos_end,
+                    pf=result.pf,
+                    trades=result.trades,
+                    profitable=profitable,
+                )
+            )
         except Exception as e:
             log.error("Walk-forward window %s-%s failed: %s", oos_start, oos_end, e)
-            window_results.append(WFWindow(
-                oos_start=oos_start, oos_end=oos_end,
-                pf=0.0, trades=0, profitable=False,
-            ))
+            window_results.append(
+                WFWindow(
+                    oos_start=oos_start,
+                    oos_end=oos_end,
+                    pf=0.0,
+                    trades=0,
+                    profitable=False,
+                )
+            )
 
     profitable_count = sum(1 for w in window_results if w.profitable)
     return WFResult(

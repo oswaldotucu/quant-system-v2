@@ -58,20 +58,32 @@ class TestRegimeBehavior:
 
 class TestEdgeCases:
     def test_empty_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0], "high": [101.0], "low": [99.0],
-            "close": [100.5], "volume": [1000],
-        }, index=pd.date_range("2023-01-01", periods=1, freq="15min"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0],
+                "high": [101.0],
+                "low": [99.0],
+                "close": [100.5],
+                "volume": [1000],
+            },
+            index=pd.date_range("2023-01-01", periods=1, freq="15min"),
+        )
         params = RegimeSwitchStrategy.default_params()
         entries, exits, direction = RegimeSwitchStrategy.generate(tiny, params)
         assert entries.shape == (1,)
         assert entries.sum() == 0
 
     def test_short_data(self) -> None:
-        tiny = pd.DataFrame({
-            "open": [100.0] * 50, "high": [101.0] * 50, "low": [99.0] * 50,
-            "close": [100.5] * 50, "volume": [1000] * 50,
-        }, index=pd.date_range("2023-01-01", periods=50, freq="15min"))
+        tiny = pd.DataFrame(
+            {
+                "open": [100.0] * 50,
+                "high": [101.0] * 50,
+                "low": [99.0] * 50,
+                "close": [100.5] * 50,
+                "volume": [1000] * 50,
+            },
+            index=pd.date_range("2023-01-01", periods=50, freq="15min"),
+        )
         params = RegimeSwitchStrategy.default_params()
         entries, _, _ = RegimeSwitchStrategy.generate(tiny, params)
         assert entries.sum() == 0
@@ -81,11 +93,18 @@ class TestDefaultParams:
     def test_has_all_required_keys(self) -> None:
         params = RegimeSwitchStrategy.default_params()
         required = {
-            "atr_period", "atr_lookback", "regime_threshold",
-            "trend_fast_ema", "trend_slow_ema",
-            "rev_rsi_period", "rev_rsi_os", "rev_rsi_ob",
-            "rev_bb_period", "rev_bb_std",
-            "tp_pct", "sl_pct",
+            "atr_period",
+            "atr_lookback",
+            "regime_threshold",
+            "trend_fast_ema",
+            "trend_slow_ema",
+            "rev_rsi_period",
+            "rev_rsi_os",
+            "rev_rsi_ob",
+            "rev_bb_period",
+            "rev_bb_std",
+            "tp_pct",
+            "sl_pct",
         }
         assert set(params.keys()) == required
 

@@ -17,9 +17,14 @@ import pandas as pd
 
 DATA_DIR = Path("./data/raw")
 REQUIRED_FILES = [
-    "MNQ_1m.csv", "MNQ_5m.csv", "MNQ_15m.csv",
-    "MES_1m.csv", "MES_5m.csv", "MES_15m.csv",
-    "MGC_1m.csv", "MGC_5m.csv", "MGC_15m.csv",
+    # Micro
+    "micro/MNQ_1m.csv", "micro/MNQ_5m.csv", "micro/MNQ_15m.csv",
+    "micro/MES_1m.csv", "micro/MES_5m.csv", "micro/MES_15m.csv",
+    "micro/MGC_1m.csv", "micro/MGC_5m.csv", "micro/MGC_15m.csv",
+    # Mini
+    "mini/NQ_1m.csv", "mini/NQ_5m.csv", "mini/NQ_15m.csv",
+    "mini/ES_1m.csv", "mini/ES_5m.csv", "mini/ES_15m.csv",
+    "mini/GC_1m.csv", "mini/GC_5m.csv", "mini/GC_15m.csv",
 ]
 REQUIRED_COLS = {"open", "high", "low", "close", "volume"}
 IS_START = pd.Timestamp("2020-01-01")

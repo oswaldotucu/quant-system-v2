@@ -211,9 +211,7 @@ def list_experiments_past_gate(
     Results are ordered by oos_pf descending (nulls last).
     """
     if min_gate not in _LEADERBOARD_GATES:
-        raise ValueError(
-            f"Invalid min_gate '{min_gate}'. Must be one of {_LEADERBOARD_GATES}"
-        )
+        raise ValueError(f"Invalid min_gate '{min_gate}'. Must be one of {_LEADERBOARD_GATES}")
     idx = _LEADERBOARD_GATES.index(min_gate)
     gates = _LEADERBOARD_GATES[idx:]
     placeholders = ", ".join("?" for _ in gates)
@@ -226,15 +224,35 @@ def list_experiments_past_gate(
     return [_row_to_experiment(r) for r in rows]
 
 
-_UPDATABLE_COLUMNS = frozenset({
-    "params", "error_msg",
-    "screen_pf", "screen_trades",
-    "is_sharpe", "is_pf", "sens_min_pf",
-    "oos_pf", "oos_trades", "oos_sharpe", "oos_sortino", "oos_calmar",
-    "oos_max_dd", "oos_max_dd_pct", "daily_pnl", "quarterly_wr", "trade_pnl",
-    "p_ruin", "p_positive", "wf_windows", "cross_confirmed", "max_corr",
-    "notes", "pine_path", "checklist_path",
-})
+_UPDATABLE_COLUMNS = frozenset(
+    {
+        "params",
+        "error_msg",
+        "screen_pf",
+        "screen_trades",
+        "is_sharpe",
+        "is_pf",
+        "sens_min_pf",
+        "oos_pf",
+        "oos_trades",
+        "oos_sharpe",
+        "oos_sortino",
+        "oos_calmar",
+        "oos_max_dd",
+        "oos_max_dd_pct",
+        "daily_pnl",
+        "quarterly_wr",
+        "trade_pnl",
+        "p_ruin",
+        "p_positive",
+        "wf_windows",
+        "cross_confirmed",
+        "max_corr",
+        "notes",
+        "pine_path",
+        "checklist_path",
+    }
+)
 
 
 def advance_experiment(
@@ -300,9 +318,7 @@ def count_experiments_by_gate(
 ) -> dict[str, int]:
     """Return a dict mapping each gate name to its experiment count."""
     c = conn or get_conn()
-    rows = c.execute(
-        "SELECT gate, COUNT(*) as n FROM experiments GROUP BY gate"
-    ).fetchall()
+    rows = c.execute("SELECT gate, COUNT(*) as n FROM experiments GROUP BY gate").fetchall()
     return {row["gate"]: row["n"] for row in rows}
 
 
@@ -311,9 +327,7 @@ def get_last_activity(
 ) -> str | None:
     """Return the most recent updated_at timestamp across all experiments."""
     c = conn or get_conn()
-    row = c.execute(
-        "SELECT MAX(updated_at) as last FROM experiments"
-    ).fetchone()
+    row = c.execute("SELECT MAX(updated_at) as last FROM experiments").fetchone()
     if row is None or row["last"] is None:
         return None
     return row["last"]

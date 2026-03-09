@@ -15,13 +15,14 @@ import asyncio
 import json
 import logging
 import queue
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from webapp.deps import get_bus
 from quant.automation.notifier import EventBus
+from webapp.deps import get_bus
 
 log = logging.getLogger(__name__)
 

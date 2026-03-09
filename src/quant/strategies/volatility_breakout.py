@@ -28,8 +28,8 @@ class VolatilityBreakoutStrategy:
             "bb_std": 2.0,
             "squeeze_threshold": 0.7,
             "min_squeeze_bars": 5,
-            "tp_pct": 0.15,      # ~37 pts MNQ (intraday scale)
-            "sl_pct": 0.3,       # 2:1 risk vs TP
+            "tp_pct": 0.15,  # ~37 pts MNQ (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -39,8 +39,8 @@ class VolatilityBreakoutStrategy:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Generate breakout signals from Bollinger Band squeezes."""
         close = data["close"].values
-        high = data["high"].values
-        low = data["low"].values
+        _high = data["high"].values
+        _low = data["low"].values
         n = len(close)
 
         bb_period = params["bb_period"]
@@ -57,7 +57,7 @@ class VolatilityBreakoutStrategy:
         avg_bb_width = pd.Series(bb_width).rolling(bb_period * 2).mean().values
 
         # Squeeze: current width < threshold * avg width
-        in_squeeze = (bb_width < squeeze_threshold * avg_bb_width)
+        in_squeeze = bb_width < squeeze_threshold * avg_bb_width
 
         # Count consecutive squeeze bars
         squeeze_count = np.zeros(n, dtype=int)

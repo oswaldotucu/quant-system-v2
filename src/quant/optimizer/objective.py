@@ -18,7 +18,6 @@ from typing import Any
 import optuna
 import pandas as pd
 
-from config.settings import get_settings
 from quant.data.splitter import is_train, is_val, validate_no_oos_leak
 from quant.engine.backtest import run_backtest
 from quant.optimizer.param_space import get_param_space
@@ -83,9 +82,11 @@ def build_objective(
 
         trial.set_user_attr("is_val_pf", val_result.pf)
 
-        if (val_result.pf < IS_VAL_MIN_PF
-                or val_result.trades < IS_VAL_MIN_TRADES
-                or val_result.win_rate < IS_VAL_MIN_WIN_RATE):
+        if (
+            val_result.pf < IS_VAL_MIN_PF
+            or val_result.trades < IS_VAL_MIN_TRADES
+            or val_result.win_rate < IS_VAL_MIN_WIN_RATE
+        ):
             return 0.0
 
         return val_result.sharpe  # <-- THE OBJECTIVE: IS-val Sharpe, NOT PF

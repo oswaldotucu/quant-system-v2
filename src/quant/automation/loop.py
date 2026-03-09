@@ -75,10 +75,12 @@ class AutomationLoop:
         n_workers = self._cfg.n_workers
         if n_workers < 1:
             import os
+
             n_workers = os.cpu_count() or 4
 
-        log.info("AutomationLoop running with %d workers, poll=%ds",
-                 n_workers, self._cfg.poll_interval)
+        log.info(
+            "AutomationLoop running with %d workers, poll=%ds", n_workers, self._cfg.poll_interval
+        )
 
         while not self._stop_event.is_set():
             if self._pause_event.is_set():
@@ -109,8 +111,7 @@ class AutomationLoop:
 
         with ThreadPoolExecutor(max_workers=n_workers) as pool:
             futures: dict[Future[GateResult], Experiment] = {
-                pool.submit(run_next_gate, exp): exp
-                for exp in experiments
+                pool.submit(run_next_gate, exp): exp for exp in experiments
             }
 
             try:
@@ -143,8 +144,13 @@ class AutomationLoop:
                     except Exception as e:
                         log.error(
                             "Gate future error for exp %d (%s/%s/%s at %s): %s",
-                            exp.id, exp.strategy, exp.ticker, exp.timeframe,
-                            exp.gate, e, exc_info=True,
+                            exp.id,
+                            exp.strategy,
+                            exp.ticker,
+                            exp.timeframe,
+                            exp.gate,
+                            e,
+                            exc_info=True,
                         )
                         self._bus.emit_gate_error(exp.id, exp.gate, str(e))
             except TimeoutError:

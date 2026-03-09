@@ -83,13 +83,15 @@ def run_optuna(
         # Progress logging every 50 trials
         trial_num = trial.number + 1
         if trial_num % 50 == 0 or trial_num == n_trials:
-            n_pruned = len([t for t in study.trials
-                           if t.state == optuna.trial.TrialState.PRUNED])
-            n_done = len([t for t in study.trials
-                         if t.state == optuna.trial.TrialState.COMPLETE])
+            n_pruned = len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])
+            n_done = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
             log.info(
                 "Optuna exp %d: trial %d/%d complete=%d pruned=%d best=%.3f",
-                exp_id, trial_num, n_trials, n_done, n_pruned,
+                exp_id,
+                trial_num,
+                n_trials,
+                n_done,
+                n_pruned,
                 best_so_far if best_so_far > float("-inf") else 0.0,
             )
 
@@ -116,8 +118,7 @@ def run_optuna(
 
     if study.best_trial is None or study.best_value is None or study.best_value <= 0:
         raise ValueError(
-            f"No valid trials found for {strategy.name}/{ticker}. "
-            "Strategy has no IS edge."
+            f"No valid trials found for {strategy.name}/{ticker}. Strategy has no IS edge."
         )
 
     return OptimizationResult(
@@ -126,6 +127,5 @@ def run_optuna(
         best_is_train_pf=study.best_trial.user_attrs.get("is_train_pf", 0.0),
         best_is_val_pf=study.best_trial.user_attrs.get("is_val_pf", 0.0),
         n_trials=len(study.trials),
-        n_complete=len([t for t in study.trials
-                        if t.state == optuna.trial.TrialState.COMPLETE]),
+        n_complete=len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]),
     )

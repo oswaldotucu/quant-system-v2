@@ -11,10 +11,8 @@ from dataclasses import dataclass
 from config.instruments import TICKERS, TIMEFRAMES
 from db.queries import (
     get_strategy,
-    list_strategies,
     seed_experiment,
     upsert_strategy,
-    Experiment,
 )
 from quant.optimizer.param_space import get_param_space
 
@@ -78,16 +76,26 @@ def seed(
             try:
                 exp_id = seed_experiment(strategy_name, ticker, tf, priority)
                 log.info("Seeded %s/%s/%s (exp_id=%d)", strategy_name, ticker, tf, exp_id)
-                results.append(SeedResult(
-                    strategy=strategy_name, ticker=ticker, timeframe=tf,
-                    exp_id=exp_id, status="seeded",
-                ))
+                results.append(
+                    SeedResult(
+                        strategy=strategy_name,
+                        ticker=ticker,
+                        timeframe=tf,
+                        exp_id=exp_id,
+                        status="seeded",
+                    )
+                )
             except Exception as e:
                 if "UNIQUE constraint" in str(e):
-                    results.append(SeedResult(
-                        strategy=strategy_name, ticker=ticker, timeframe=tf,
-                        exp_id=-1, status="already_exists",
-                    ))
+                    results.append(
+                        SeedResult(
+                            strategy=strategy_name,
+                            ticker=ticker,
+                            timeframe=tf,
+                            exp_id=-1,
+                            status="already_exists",
+                        )
+                    )
                 else:
                     log.error("Seed failed for %s/%s/%s: %s", strategy_name, ticker, tf, e)
                     raise

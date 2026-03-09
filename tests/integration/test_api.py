@@ -6,6 +6,9 @@ Tests that all routes return expected status codes and basic structure.
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,9 +16,10 @@ from webapp.main import create_app
 
 
 @pytest.fixture
-def client(tmp_path):  # type: ignore[no-untyped-def]
+def client(tmp_path: Path) -> Generator[TestClient, None, None]:
     """FastAPI test client with fresh DB."""
     import os
+
     import config.settings as _settings_mod
 
     _settings_mod._settings = None  # reset singleton so new env vars take effect

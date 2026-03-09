@@ -19,9 +19,9 @@ from quant.strategies.donchian_breakout import DonchianBreakoutStrategy
 from quant.strategies.ema_rsi import EmaRsiStrategy
 from quant.strategies.keltner_channel import KeltnerChannelStrategy
 from quant.strategies.macd_trend import MacdTrendStrategy
-from quant.strategies.rsi2_reversal import Rsi2ReversalStrategy
 from quant.strategies.mtf_ema_alignment import MtfEmaAlignmentStrategy
 from quant.strategies.regime_switch import RegimeSwitchStrategy
+from quant.strategies.rsi2_reversal import Rsi2ReversalStrategy
 from quant.strategies.rsi_bollinger_filtered import RsiBollingerFilteredStrategy
 from quant.strategies.session_momentum import SessionMomentumStrategy
 from quant.strategies.supertrend import SupertrendStrategy

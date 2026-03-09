@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -77,7 +77,8 @@ def create_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     # Routers
-    from webapp.routes import pages, api, sse
+    from webapp.routes import api, pages, sse
+
     app.include_router(pages.router)
     app.include_router(api.router, prefix="/api")
     app.include_router(sse.router, prefix="/api")

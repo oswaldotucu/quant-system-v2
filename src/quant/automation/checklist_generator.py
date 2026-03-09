@@ -28,7 +28,7 @@ def generate_checklist(exp: Experiment) -> Path:
     content = f"""# Forward Test Checklist
 Strategy: {exp.strategy} | Ticker: {exp.ticker} | Timeframe: {exp.timeframe}
 Generated: {date.today()} | Experiment ID: {exp.id}
-OOS PF: {exp.oos_pf or 'N/A'} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
+OOS PF: {exp.oos_pf or "N/A"} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
 
 ---
 
@@ -38,7 +38,7 @@ OOS PF: {exp.oos_pf or 'N/A'} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
 - [ ] Load Pine Script from data/pine_scripts/
 - [ ] Apply to {exp.ticker} {exp.timeframe} chart
 - [ ] Backtest in TradingView from 2024-01-01 to present
-- [ ] Confirm OOS PF is within 5% of {exp.oos_pf or 'N/A'}
+- [ ] Confirm OOS PF is within 5% of {exp.oos_pf or "N/A"}
 - [ ] Verify commission is set to $1.70/side (cash_per_contract)
 
 ### Broker Setup
@@ -79,7 +79,7 @@ Pass criteria for continuing live:
 ## Strategy Parameters (DO NOT change these live)
 
 ```
-{chr(10).join(f'{k} = {v}' for k, v in params.items())}
+{chr(10).join(f"{k} = {v}" for k, v in params.items())}
 ```
 
 ---
