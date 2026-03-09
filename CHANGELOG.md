@@ -5,29 +5,79 @@ Format: [date] | component | what changed | why.
 
 ---
 
-## [2026-03-08] — NinjaTrader Data Pipeline
+## [2026-03-09] — SCREEN Gate OOS Fix + Warmup Guards + Lint Cleanup
+
+### Fixed
+- **SCREEN gate OOS data leak** — `gates.py:111` used `data.iloc[-n_bars:]` on full dataset,
+  touching 2024+ OOS data before OOS_VAL gate. Fixed to use `is_full(data).iloc[-n_bars:]`.
+- **6 strategy warmup guards** — Added `valid[warmup:] = True` masks to prevent false entries
+  during indicator convergence period:
+  - `ema_rsi.py` — warmup = max(ema_slow, rsi_period)
+  - `adx_ema.py` — warmup = 2 * adx_period (ADX needs double smoothing)
+  - `macd_trend.py` — warmup = macd_slow + macd_signal
+  - `supertrend.py` — warmup = atr_period + 1 (prevents synthetic flip from zero-init)
+  - `rsi2_reversal.py` — warmup = max(rsi_period, trend_ema)
+  - `rsi_mean_reversion.py` — warmup = rsi_period
+- **Ruff lint cleanup** — Resolved ~336 lint errors: B904 (`raise from e`), F841 (unused vars),
+  B007 (unused loop vars), S603/S607 noqa for osascript. Added per-file-ignores for tests
+  (S101, S108) and global ignores (B008, ANN401).
+- **Ruff format** — Reformatted 41 files for consistency.
+- **Verified Round 2 bug fixes** — All 6 fixes confirmed in place: leaderboard sort key None
+  handling, N+1 dashboard queries, Bollinger warmup guard, `trigger_fetch` async-to-sync,
+  Donchian O(n^2)-to-O(n).
+
+### Changed
+- **CLAUDE.md restructured** — Added orchestrator rule (all implementation via sub-agents),
+  skill development exception, CLAUDE.md hygiene rule. Extracted verbose sections to
+  `docs/dev-commands.md`, `docs/architecture.md`, `docs/code-quality.md`, `docs/templates.md`.
+  Reduced from 439 to 237 lines (46% reduction).
+- **pyproject.toml ruff config** — Added B008, ANN401 to global ignores; S101, S108
+  per-file-ignores for tests.
+
+### Added
+- `docs/dev-commands.md` — Full development command reference.
+- `docs/architecture.md` — Directory tree, imports, data flow, abstractions, threading.
+- `docs/code-quality.md` — Type annotations, error handling, logging, constants patterns.
+- `docs/templates.md` — CHANGELOG and DECISIONS.md format templates.
+
+---
+
+## [2026-03-08] — NinjaTrader Data Pipeline + Mini Futures Support
 
 ### Added
 - `scripts/ninjatrader/CsvExporter.cs`: NinjaScript indicator that exports OHLCV for
-  all 9 instrument/timeframe combos (MNQ/MES/MGC x 1m/5m/15m) to CSV. Runs on a single
-  chart via `AddDataSeries()`. Backfills history on load, appends on each bar close.
+  all 18 instrument/timeframe combos (MNQ/MES/MGC/NQ/ES/GC x 1m/5m/15m) to CSV.
+  Runs on a single chart via `AddDataSeries()`. Backfills history on load, appends on
+  each bar close. Outputs to `micro/` and `mini/` subfolders matching `data/raw/` layout.
+- `src/config/instruments.py`: Added mini futures (NQ, ES, GC) — `TICKER_CLASS` mapping,
+  `CONTRACT_MULT`, `MARGIN_EST`, `YF_SYMBOLS`, `MINI_TICKERS`. Added `ticker_data_dir()`
+  helper for resolving `data_dir/micro/` or `data_dir/mini/` from ticker name.
 - `src/quant/data/ingest.py`: Ingestion module — reads NT CSV exports from staging folder,
   validates (NaN rejection, column check), deduplicates by timestamp, detects weekday gaps
-  > 24h, appends new bars to `data/raw/`, clears LRU cache.
+  > 24h, appends new bars to `data/raw/{micro,mini}/`, clears LRU cache.
 - `src/quant/data/health.py`: Data health reporting — per-file freshness (fresh/stale/missing),
-  bar count, last timestamp, staleness in hours.
+  bar count, last timestamp, staleness in hours. Covers all 18 files.
 - `scripts/ingest_data.py`: CLI wrapper for `make ingest`. Reads `STAGING_DIR` from `.env`.
 - `src/webapp/routes/api.py`: `GET /api/data/health` endpoint returns per-file status JSON.
   `GET /api/data/health/html` returns HTML partial for HTMX. `POST /api/data/ingest`
   triggers ingestion from staging folder.
 - `src/webapp/templates/partials/data_health.html`: Dashboard data health indicator
-  (green/yellow/red per file).
+  (green/yellow/red per file), grouped by MICRO and MINI sections.
 - `src/webapp/templates/dashboard.html`: Added DATA HEALTH section with HTMX auto-refresh.
 - `src/webapp/templates/settings.html`: Added NT Ingestion button.
 - `src/config/settings.py`: Added `staging_dir` setting.
 - `Makefile`: Added `make ingest` target.
-- `tests/unit/test_ingest.py`: 10 tests for ingestion (new file, append, dedup, NaN, gaps).
+- `tests/unit/test_ingest.py`: 11 tests for ingestion (new file, append, dedup, NaN, gaps,
+  mini subfolder).
 - `tests/unit/test_data_health.py`: 3 tests for health reporting.
+
+### Changed
+- `src/quant/data/loader.py`: Updated path resolution to use `ticker_data_dir()` for
+  subfolder support (`data/raw/micro/` or `data/raw/mini/`).
+- `src/quant/data/fetcher.py`: Updated Yahoo Finance path resolution to use `TICKER_CLASS`
+  subfolders. Creates subdirectories automatically.
+- `scripts/verify_data.py`: Updated to check all 18 files across `micro/` and `mini/`
+  subfolders.
 
 ---
 

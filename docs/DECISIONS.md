@@ -165,3 +165,20 @@ a local dev tool; can be self-hosted if needed).
 **Alternatives**: (1) Delete and re-seed — loses the stored screen_pf/screen_trades metrics. (2) Manually advance to IS_OPT — bypasses the gate logic and could advance experiments that shouldn't pass even under new thresholds.
 
 **Consequences**: 13 experiments re-enter SCREEN. The SCREEN gate will re-run `run_backtest()` on recent data and check against current thresholds. The UNIQUE index `idx_experiments_unique` (WHERE gate NOT IN ('REJECTED')) prevents duplicate active experiments per strategy/ticker/timeframe, so the 27 remaining REJECTED duplicates don't conflict.
+
+---
+
+## [2026-03-09] — Walk-Forward Window Counting in CONFIRM Gate
+
+**Context**: During code review, it was flagged that `walk_forward.py` counts ALL windows (both IS and OOS periods) toward the CONFIRM gate pass threshold. The CONFIRM gate requires "profitable in >= 3 of 4 windows" via `wf.profitable_windows / wf.total_windows`. The question is whether only OOS windows should count, since IS windows are expected to be profitable (they were optimized on that data).
+
+**Decision**: Keep current behavior — count all windows including IS periods. Rationale:
+1. Walk-forward already uses rolling IS→OOS splits that are distinct from the main IS/OOS split. Each WF window has its own mini-IS and mini-OOS, so the "IS" windows in WF are NOT the same IS data used for Optuna optimization.
+2. If a strategy fails even on its own WF-IS windows with the fixed params from Optuna, that's a strong rejection signal.
+3. The 3/4 threshold is already conservative. Requiring 3/4 of only-OOS windows would make CONFIRM nearly impossible to pass.
+
+**Alternatives**:
+- Count only WF-OOS windows: Higher bar but potentially too aggressive given the 4-window design.
+- Weight WF-OOS windows more heavily: Adds complexity without clear benefit.
+
+**Consequences**: Strategies that are profitable on 3+ of 4 walk-forward windows (including WF-IS) pass. This is a moderate bar that catches overfitting without being prohibitively strict.
