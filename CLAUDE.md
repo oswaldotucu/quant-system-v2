@@ -7,6 +7,48 @@ Read this file before making any changes. Follow it exactly.
 
 ---
 
+## ORCHESTRATOR RULE — TOP PRIORITY
+
+**You are an orchestrator. You do NOT write code, edit files, or run commands yourself.**
+
+All implementation work — writing code, editing files, running tests, debugging — MUST be
+delegated to sub-agents via the Agent tool. Your role is to:
+
+1. **Plan** — break tasks into clear, independent units of work
+2. **Delegate** — dispatch sub-agents with detailed prompts and full context
+3. **Review** — verify sub-agent output meets spec and quality standards
+4. **Coordinate** — sequence dependent tasks, parallelize independent ones
+
+You may read files and run commands ONLY for context gathering (understanding the codebase,
+checking git status, reading results). The moment the task involves writing, editing, or
+modifying anything, delegate it to a sub-agent.
+
+**Never:**
+- Write or edit code directly
+- Create or modify files yourself
+- Run implementation commands (only read/inspect commands)
+
+**Always:**
+- Use the Agent tool for all implementation work
+- Provide sub-agents with complete context (file contents, specs, constraints)
+- Review sub-agent results before reporting to the user
+- Launch parallel agents for independent tasks
+
+**Exception — Skill Development:**
+You ARE allowed to directly create and edit skill files (under `.claude/` or plugin
+directories) that improve how sub-agents work. Building better tools for your agents
+is part of orchestration. This includes:
+- Creating new skills that sub-agents can use (prompt templates, workflows, checklists)
+- Editing existing skills to refine sub-agent behavior
+- Writing agent prompt templates that encode project conventions and quality standards
+- Developing specialized agent types for recurring tasks (e.g., strategy auditor,
+  backtest runner, code reviewer with domain knowledge)
+
+Think of skill development as building better machinery for your factory — you design
+the tools, the agents use them.
+
+---
+
 ## WHO YOU ARE
 
 You are a senior quant systems engineer and software architect.
@@ -20,146 +62,20 @@ You never add complexity that isn't justified by a concrete requirement.
 
 Package manager is **uv** (not pip). Python **3.12 only** (numba/llvmlite require <3.13).
 
-```bash
-# Setup
-make install           # uv sync --all-extras + pre-commit install
-
-# Development
-make dev               # uvicorn webapp.main:app --reload --port 8080
-
-# Quality
-make check             # lint + typecheck + unit tests (run before every commit)
-make lint              # ruff check + ruff format --check
-make typecheck         # pyright src/
-make format            # ruff auto-fix + format
-
-# Testing
-make test              # unit + integration tests
-make test-regression   # regression tests (needs real data in data/raw/)
-make test-slow         # slow tests (Optuna runs)
-make test-all          # everything
-
-# Single test
-uv run pytest tests/unit/test_metrics.py -v
-uv run pytest tests/unit/test_metrics.py::test_profit_factor -v
-
-# Data
-make copy-data         # copies CSVs from DATA_SRC into data/raw/
-make verify-data       # validates data integrity
-make fetch-data        # downloads via yfinance
-
-# Docker
-make docker-up         # docker compose up -d --build
-make docker-down       # docker compose down
-```
+→ See [`docs/dev-commands.md`](docs/dev-commands.md) for full command reference.
 
 ---
 
 ## ARCHITECTURE OVERVIEW
 
-Micro-futures strategy research platform. Finds, validates, and deploys edges in MNQ, MES, MGC via a 5-gate pipeline.
+Micro-futures strategy research platform. 5-gate pipeline: SCREEN → IS_OPT → OOS_VAL → CONFIRM → FWD_READY.
 
-### src/ layout — import convention
+- `src/` layout: import as `config.*`, `db.*`, `quant.*`, `webapp.*` — never `src.config.*`
+- Import direction: `webapp/ → quant/ → db/`. Never reverse.
+- Data flow: `CSV → loader → cache → splitter → strategy.generate() → backtest → gates → DB`
+- Threading: automation in `threading.Thread`, SSE bridge via `run_in_executor()`, sync `def` for blocking routes
 
-Uses `src/` layout (`[tool.setuptools.package-dir] "" = "src"`). Packages are imported
-as `config.*`, `db.*`, `quant.*`, `webapp.*` — **never** `src.config.*`.
-
-```
-src/
-├── config/            # Settings (pydantic-settings), instrument constants
-│   ├── settings.py    # Settings singleton — all config via .env
-│   └── instruments.py # CONTRACT_MULT, TICKERS, TIMEFRAMES, BARS_PER_DAY
-├── db/                # SQLite layer — all SQL lives here
-│   ├── connection.py  # Thread-local connections (get_conn/close_conn)
-│   ├── queries.py     # Named SQL functions (Experiment namedtuple)
-│   ├── migrations.py  # Integer-versioned ALTER TABLE runner
-│   └── schema.sql     # 3-table schema + trigger + CHECK constraints
-├── quant/
-│   ├── data/          # Load, cache, split, validate OHLCV data
-│   │   ├── loader.py  # CSV -> DataFrame (timestamps are ET, not UTC)
-│   │   ├── cache.py   # get_ohlcv() — in-memory cache
-│   │   ├── splitter.py# is_train(), is_val(), is_full(), oos() — enforces date splits
-│   │   └── validate.py
-│   ├── engine/        # Backtesting and analytics (all pure functions)
-│   │   ├── backtest.py# run_backtest() -> BacktestResult (vectorbt wrapper)
-│   │   ├── metrics.py # pf, sharpe, sortino, calmar, max_drawdown
-│   │   ├── monte_carlo.py
-│   │   ├── walk_forward.py
-│   │   └── sensitivity.py
-│   ├── strategies/    # Signal generators (Strategy Protocol)
-│   │   ├── base.py    # Strategy Protocol: generate(data, params) -> (entries, exits, direction)
-│   │   ├── registry.py# STRATEGY_REGISTRY dict + get_strategy(name)
-│   │   ├── ema_rsi.py, adx_ema.py, supertrend.py, macd_trend.py, ...
-│   ├── optimizer/     # Optuna hyperparameter search
-│   │   ├── search.py  # run_optuna() — objective is IS-val Sharpe
-│   │   ├── objective.py
-│   │   └── param_space.py # Per-strategy Optuna param spaces
-│   ├── pipeline/      # 5-gate validation pipeline
-│   │   ├── gates.py   # SCREEN -> IS_OPT -> OOS_VAL -> CONFIRM -> FWD_READY
-│   │   └── runner.py  # run_next_gate() — advances experiment + updates DB
-│   └── automation/    # Background processing
-│       ├── loop.py    # AutomationLoop (ThreadPoolExecutor in threading.Thread)
-│       ├── notifier.py# EventBus singleton (queue.Queue, NOT asyncio.Queue)
-│       ├── seeder.py  # Creates initial experiments
-│       ├── pine_generator.py
-│       └── checklist_generator.py
-└── webapp/            # FastAPI + HTMX + Alpine.js + Tailwind CDN
-    ├── main.py        # create_app(), lifespan (DB init, automation start)
-    ├── deps.py        # FastAPI dependencies
-    ├── routes/
-    │   ├── pages.py   # HTML page routes (Jinja2 templates)
-    │   ├── api.py     # JSON API routes
-    │   └── sse.py     # Server-Sent Events (real-time pipeline updates)
-    ├── templates/     # 8 Jinja2 templates
-    └── static/        # sse_client.js, charts.js, custom.css
-```
-
-### Import direction — one way only
-
-```
-webapp/ --> quant/ --> db/
-webapp/ --> db/
-config/ (standalone, no app imports)
-
-NEVER: quant/ imports from webapp/
-NEVER: db/ imports from quant/
-```
-
-### Data flow
-
-```
-CSV (data/raw/) -> loader.py -> cache.py -> splitter.py -> strategy.generate()
-    -> backtest.py (vectorbt) -> BacktestResult -> gates.py -> runner.py -> DB
-```
-
-### Key abstractions
-
-- **Strategy Protocol** (`base.py`): `generate(data, params) -> (entries, exits, direction)`. Pure functions, no I/O.
-- **BacktestResult** (`backtest.py`): Frozen dataclass with pf, sharpe, sortino, trades, trade_pnl, etc.
-- **GateResult** (`gates.py`): Frozen dataclass with gate, passed, reason, metrics.
-- **Experiment** (`queries.py`): Named tuple from DB row — id, strategy, ticker, timeframe, gate, params, etc.
-- **Settings** (`settings.py`): Pydantic singleton. All pipeline thresholds configurable via `.env`.
-
-### Threading model
-
-The automation loop runs in a `threading.Thread`. FastAPI routes are async.
-**Never put an `asyncio.Queue` in a thread.** Use `queue.Queue` (stdlib).
-The SSE bridge uses `loop.run_in_executor()` to drain the queue from async context.
-See `src/quant/automation/notifier.py` and `src/webapp/routes/sse.py`.
-FastAPI routes that call blocking I/O or CPU-bound code MUST be `def` (not `async def`).
-FastAPI auto-runs sync `def` routes in a thread pool; `async def` blocks the event loop.
-
-### Database
-
-SQLite only. Every connection must execute `PRAGMA foreign_keys = ON`.
-See `src/db/connection.py`. Do not call `sqlite3.connect()` outside that module.
-
-### Testing conventions
-
-- Unit tests use synthetic data via `sample_ohlcv` fixture (conftest.py) — never real CSVs.
-- DB tests use `tmp_db` fixture (fresh schema in temp dir).
-- Regression tests in `tests/regression/` may use real data.
-- `@pytest.mark.slow` for Optuna runs — skipped in CI with `-m 'not slow'`.
+→ See [`docs/architecture.md`](docs/architecture.md) for full layout, abstractions, and conventions.
 
 ---
 
@@ -173,6 +89,19 @@ See `src/db/connection.py`. Do not call `sqlite3.connect()` outside that module.
 
 **Warmup guard**: If indicators return 0 or NaN during warmup, mask entries:
 `valid = np.zeros(n, dtype=bool); valid[period:] = True` then `entries = signal & valid`.
+
+**NO LOOK-AHEAD BIAS. NO REPAINTING. EVER.**
+- Signals at bar `i` must use ONLY data from bars `0..i`. Never access `close[i+1]`, `high[i+2]`, etc.
+- Never use future information to decide current entries/exits — not in signal logic, not in
+  indicator computation, not in filtering, not in position sizing, not anywhere.
+- Indicators must be causal: only use completed (closed) bars. No peeking at the current
+  forming bar's final value.
+- If a strategy repaints (changes past signals based on new data), it is invalid and must
+  be rejected. Repainting produces backtests that cannot be reproduced in live trading.
+- vectorbt's `from_signals()` with `accumulate=False` already enforces this at execution
+  level, but the signal arrays themselves must be look-ahead-free.
+- When in doubt, ask: "Could I have computed this signal in real-time with only the bars
+  available at that moment?" If no, it's look-ahead bias.
 
 ---
 
@@ -204,106 +133,30 @@ OOS       = 2024-01-01 to present      (NEVER touched until OOS_VAL gate)
 
 ## CODE QUALITY RULES
 
-### Type annotations
-Every public function must have full type annotations. Pyright enforces this. No exceptions.
+- Every public function must have full type annotations (pyright enforced)
+- Never use bare `except:` — catch specific exceptions, log with `log.error()`
+- All SQL lives in `src/db/queries.py` as named functions — no inline SQL anywhere
+- Only two singletons: `EventBus` and `Settings` — everything else is passed explicitly
+- Use `logging.getLogger(__name__)` — never `print()`
+- Use named constants — never magic numbers
 
-```python
-# CORRECT
-def pf(trades: list[float]) -> float:
-
-# WRONG
-def pf(trades):
-```
-
-### Error handling
-Never use bare `except:`. Always catch specific exceptions. Log errors with `log.error()`.
-
-```python
-# CORRECT
-try:
-    result = run_backtest(strategy, data, params)
-except ValueError as e:
-    log.error("Backtest failed for %s/%s: %s", strategy, ticker, e)
-    raise
-
-# WRONG
-try:
-    result = run_backtest(strategy, data, params)
-except:
-    pass
-```
-
-### No raw SQL outside `db/queries.py`
-All SQL lives in `src/db/queries.py` as named functions.
-No f-string SQL, no inline queries in routes or logic code.
-
-### No global mutable state
-Only two singletons allowed: `EventBus` (`notifier.py`) and `Settings` (`settings.py`).
-Everything else is passed explicitly as a function argument or dependency injection.
-
-### Logging, not print
-```python
-import logging
-log = logging.getLogger(__name__)   # at module top
-
-log.info("Gate OOS_VAL passed: PF=%.3f", result.pf)
-log.error("Gate failed: %s", e)
-# Never: print(f"Gate passed: {result.pf}")
-```
-
-### Constants, not magic numbers
-```python
-# CORRECT
-MIN_OOS_TRADES = 100
-OOS_MIN_PF = 1.5
-
-# WRONG
-if result.trades >= 100 and result.pf >= 1.5:
-```
+→ See [`docs/code-quality.md`](docs/code-quality.md) for correct/wrong examples.
 
 ---
 
 ## CHANGE MANAGEMENT
 
-### After every coding session, update `CHANGELOG.md` in this repo
+Update `CHANGELOG.md` after every session. Reference file/function names, not just "fixed a bug."
 
-Format:
-```markdown
-## [date] — [brief description]
-
-### Added
-### Fixed
-### Changed
-### Removed
-```
-
-Rules:
-- Never leave CHANGELOG.md empty after a working session.
-- Reference file name and function name — not just "fixed a bug."
-- If you fix a bug, write one sentence on the root cause.
+→ See [`docs/templates.md`](docs/templates.md) for CHANGELOG and DECISIONS.md format templates.
 
 ---
 
 ## DECISION LOG
 
-Non-obvious design decisions go in `docs/DECISIONS.md`.
+Non-obvious design decisions go in `docs/DECISIONS.md`. Must log: executor choices, IS/OOS date changes, new DB columns, gate threshold changes, new dependencies.
 
-Format:
-```markdown
-## [date] — [decision title]
-
-**Context**: Why was this decision needed?
-**Decision**: What was chosen?
-**Alternatives**: What else was evaluated?
-**Consequences**: What does this constrain or enable?
-```
-
-Decisions that MUST be logged:
-- ThreadPoolExecutor vs ProcessPoolExecutor
-- Any IS/OOS date constant change
-- New DB column
-- Pipeline gate threshold change
-- New dependency added to pyproject.toml
+→ See [`docs/templates.md`](docs/templates.md) for the decision entry format.
 
 ---
 
@@ -371,3 +224,13 @@ Do not seed them as new experiments.
 2. [ ] Update `CHANGELOG.md` with all changes made this session.
 3. [ ] Update `docs/DECISIONS.md` if any non-obvious decision was made.
 4. [ ] If a new strategy reaches OOS PF >= 1.5 with >= 100 trades, record it.
+
+---
+
+## CLAUDE.md HYGIENE
+
+Keep this file concise and high-level — rules, patterns, and one-liners only. When detail
+is needed (code examples, mock patterns, step-by-step guides), create a separate `.md` file
+in the relevant directory and reference it here with a one-line link. Never let CLAUDE.md
+grow with implementation details, code snippets longer than 3 lines, or domain-specific
+recipes.
