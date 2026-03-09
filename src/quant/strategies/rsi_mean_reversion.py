@@ -29,8 +29,8 @@ class RsiMeanReversionStrategy:
             "rsi_period": 14,
             "rsi_oversold": 30,
             "rsi_overbought": 70,
-            "tp_pct": 0.15,      # ~37 pts MNQ (intraday scale)
-            "sl_pct": 0.3,       # 2:1 risk vs TP
+            "tp_pct": 0.15,  # ~37 pts MNQ (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -45,18 +45,21 @@ class RsiMeanReversionStrategy:
         rsi = _rsi(close, params["rsi_period"])
 
         # Long: RSI was below oversold, now crosses back above
-        long_entries = (
-            (rsi[1:] >= params["rsi_oversold"]) & (rsi[:-1] < params["rsi_oversold"])
-        )
+        long_entries = (rsi[1:] >= params["rsi_oversold"]) & (rsi[:-1] < params["rsi_oversold"])
         long_entries = np.concatenate([[False], long_entries])
 
         # Short: RSI was above overbought, now crosses back below
-        short_entries = (
-            (rsi[1:] <= params["rsi_overbought"]) & (rsi[:-1] > params["rsi_overbought"])
+        short_entries = (rsi[1:] <= params["rsi_overbought"]) & (
+            rsi[:-1] > params["rsi_overbought"]
         )
         short_entries = np.concatenate([[False], short_entries])
 
-        entries = long_entries | short_entries
+        # Warmup guard: RSI fills with synthetic 50.0 during warmup
+        warmup = params["rsi_period"]
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+
+        entries = (long_entries | short_entries) & valid
         direction = long_entries
         exits = np.zeros(n, dtype=bool)
 

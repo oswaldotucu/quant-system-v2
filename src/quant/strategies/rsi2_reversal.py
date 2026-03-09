@@ -34,9 +34,9 @@ class Rsi2ReversalStrategy:
             "rsi_period": 2,
             "rsi_os": 10,
             "rsi_ob": 90,
-            "trend_ema": 50,     # 100 too slow for 15m
-            "tp_pct": 0.15,      # ~37 pts MNQ (intraday scale)
-            "sl_pct": 0.3,       # 2:1 risk vs TP
+            "trend_ema": 50,  # 100 too slow for 15m
+            "tp_pct": 0.15,  # ~37 pts MNQ (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -55,20 +55,19 @@ class Rsi2ReversalStrategy:
         rsi_ob = params["rsi_ob"]
 
         # Long: RSI crosses UP through oversold level (exits oversold) AND price above trend
-        long_entries = (
-            (rsi[1:] >= rsi_os)
-            & (rsi[:-1] < rsi_os)
-            & (close[1:] > trend[1:])
-        )
+        long_entries = (rsi[1:] >= rsi_os) & (rsi[:-1] < rsi_os) & (close[1:] > trend[1:])
         # Short: RSI crosses DOWN through overbought level (exits overbought) AND price below trend
-        short_entries = (
-            (rsi[1:] <= rsi_ob)
-            & (rsi[:-1] > rsi_ob)
-            & (close[1:] < trend[1:])
-        )
+        short_entries = (rsi[1:] <= rsi_ob) & (rsi[:-1] > rsi_ob) & (close[1:] < trend[1:])
 
         entries = np.concatenate([[False], long_entries | short_entries])
         direction = np.concatenate([[True], long_entries])
+
+        # Warmup guard: trend EMA needs convergence period
+        warmup = max(params["rsi_period"], params["trend_ema"])
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+        entries = entries & valid
+
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction

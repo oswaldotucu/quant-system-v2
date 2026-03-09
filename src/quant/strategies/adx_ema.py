@@ -72,8 +72,8 @@ class AdxEmaStrategy:
             "ema_slow": 21,
             "adx_period": 14,
             "adx_threshold": 15,  # lower = more signals (25 too strict for 15m)
-            "tp_pct": 0.15,       # ~37 pts MNQ, ~9 pts MES (intraday scale)
-            "sl_pct": 0.3,        # 2:1 risk vs TP
+            "tp_pct": 0.15,  # ~37 pts MNQ, ~9 pts MES (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -105,6 +105,13 @@ class AdxEmaStrategy:
 
         entries = np.concatenate([[False], long_entries | short_entries])
         direction = np.concatenate([[True], long_entries])
+
+        # Warmup guard: ADX is valid from 2*period onward
+        warmup = 2 * params["adx_period"]
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+        entries = entries & valid
+
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction

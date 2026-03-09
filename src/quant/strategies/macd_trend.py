@@ -34,9 +34,9 @@ class MacdTrendStrategy:
             "macd_fast": 5,
             "macd_slow": 13,
             "macd_signal": 8,
-            "trend_ema": 50,     # 100 too slow for 15m (lags ~25 hours)
-            "tp_pct": 0.15,      # ~37 pts MNQ (intraday scale)
-            "sl_pct": 0.3,       # 2:1 risk vs TP
+            "trend_ema": 50,  # 100 too slow for 15m (lags ~25 hours)
+            "tp_pct": 0.15,  # ~37 pts MNQ (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -72,6 +72,13 @@ class MacdTrendStrategy:
 
         entries = np.concatenate([[False], long_entries | short_entries])
         direction = np.concatenate([[True], long_entries])
+
+        # Warmup guard: MACD signal line needs slow EMA + signal smoothing
+        warmup = params["macd_slow"] + params["macd_signal"]
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+        entries = entries & valid
+
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction

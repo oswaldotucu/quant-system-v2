@@ -33,10 +33,10 @@ class EmaRsiStrategy:
             "ema_fast": 5,
             "ema_slow": 13,
             "rsi_period": 9,
-            "rsi_os": 45,    # oversold threshold (wider = more signals)
-            "rsi_ob": 55,    # overbought threshold
+            "rsi_os": 45,  # oversold threshold (wider = more signals)
+            "rsi_ob": 55,  # overbought threshold
             "tp_pct": 0.15,  # take-profit % (~37 pts MNQ, ~9 pts MES)
-            "sl_pct": 0.3,   # stop-loss %
+            "sl_pct": 0.3,  # stop-loss %
         }
 
     @staticmethod
@@ -70,8 +70,13 @@ class EmaRsiStrategy:
         rsi_cross_dn = (rsi[1:] <= params["rsi_ob"]) & (rsi[:-1] > params["rsi_ob"])
         rsi_cross_dn = np.concatenate([[False], rsi_cross_dn])
 
-        long_entries = trend_up & rsi_cross_up
-        short_entries = trend_dn & rsi_cross_dn
+        # Warmup guard: EMA/RSI are under-converged before this point
+        warmup = max(params["ema_slow"], params["rsi_period"])
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+
+        long_entries = trend_up & rsi_cross_up & valid
+        short_entries = trend_dn & rsi_cross_dn & valid
 
         entries = long_entries | short_entries
         direction = long_entries  # True = long, False = short (where entries is True)
@@ -85,6 +90,7 @@ class EmaRsiStrategy:
 # ---------------------------------------------------------------------------
 # Technical indicator helpers (dependency-free, use only numpy)
 # ---------------------------------------------------------------------------
+
 
 def _ema(close: np.ndarray, period: int) -> np.ndarray:
     """Exponential moving average."""
@@ -104,7 +110,7 @@ def _rsi(close: np.ndarray, period: int) -> np.ndarray:
     if n <= period:
         return rsi
 
-    delta = np.diff(close)                     # length n-1
+    delta = np.diff(close)  # length n-1
     gains = np.maximum(delta, 0.0)
     losses = np.maximum(-delta, 0.0)
 

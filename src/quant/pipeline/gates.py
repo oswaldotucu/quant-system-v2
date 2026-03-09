@@ -107,7 +107,8 @@ def _run_screen(
     wasting 45 minutes of Optuna.
     """
     n_bars = MIN_BARS_SCREEN.get(exp.timeframe, 780)
-    recent = data.iloc[-n_bars:]
+    # Use IS data only — OOS must never be touched before OOS_VAL gate
+    recent = is_full(data).iloc[-n_bars:]
 
     result = run_backtest(strategy_cls, recent, strategy_cls.default_params(), exp.ticker)
     passed = result.pf >= cfg.screen_min_pf and result.trades >= cfg.screen_min_trades

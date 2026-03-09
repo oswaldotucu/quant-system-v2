@@ -87,9 +87,9 @@ class SupertrendStrategy:
     def default_params() -> dict[str, Any]:
         return {
             "atr_period": 7,
-            "multiplier": 1.5,   # tighter bands = more flips on 15m
-            "tp_pct": 0.15,      # ~37 pts MNQ (intraday scale)
-            "sl_pct": 0.3,       # 2:1 risk vs TP
+            "multiplier": 1.5,  # tighter bands = more flips on 15m
+            "tp_pct": 0.15,  # ~37 pts MNQ (intraday scale)
+            "sl_pct": 0.3,  # 2:1 risk vs TP
         }
 
     @staticmethod
@@ -104,7 +104,9 @@ class SupertrendStrategy:
         n = len(close)
 
         _, is_bullish = _supertrend(
-            high, low, close,
+            high,
+            low,
+            close,
             params["atr_period"],
             params["multiplier"],
         )
@@ -115,6 +117,13 @@ class SupertrendStrategy:
 
         entries = np.concatenate([[False], long_flip | short_flip])
         direction = np.concatenate([[True], long_flip])
+
+        # Warmup guard: prevents synthetic flip from zero-init at bar atr_period
+        warmup = params["atr_period"] + 1
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+        entries = entries & valid
+
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction
