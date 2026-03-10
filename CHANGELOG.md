@@ -5,6 +5,34 @@ Format: [date] | component | what changed | why.
 
 ---
 
+## [2026-03-10] — Full Repo Code Review + 10-Task Fix Sprint
+
+### Fixed
+- **Keltner Channel missing warmup guard** — `keltner_channel.py` had `MIN_BARS_FOR_SIGNALS=3` (meaningless). Replaced with proper `max(kc_period, atr_period)` warmup mask. Zero ATR during convergence was generating false entries.
+- **Volatility Breakout look-ahead + missing warmup** — `volatility_breakout.py` used current bar's squeeze count (look-ahead). Fixed to use prior bar's. Added `bb_period * 2` warmup guard.
+- **Calmar ratio formula wrong** — `backtest.py` computed `total_pnl / max_dd * 100` (unannualized). Now properly annualizes return before dividing by max drawdown.
+- **Monte Carlo crash on empty trades** — `monte_carlo.py` logged warning but didn't return early on empty `trade_pnl`. Added early return with `p_ruin=1.0`.
+- **Zero median price guard** — `backtest.py` commission calc guarded against `data["close"].median() == 0`.
+- **Commission constant duplication** — Removed `COMMISSION_RT` from `instruments.py`. `backtest.py` now reads from `settings.commission_rt` (respects `.env` overrides).
+- **5 nullable numeric `or` patterns** — Fixed `value or fallback` in `search.py`, `loop.py`, `checklist_generator.py` (CLAUDE.md rule violation).
+- **Volume breakout self-reference** — `volume_breakout.py` avg_vol now uses `.shift(1)` to exclude current bar.
+- **AppleScript command injection** — `notifier.py` now strips newlines/carriage returns from title and message.
+- **API gate list duplication** — `api.py` `_ALL_GATES` replaced with `GATE_SEQUENCE` import.
+- **Health check dependency injection** — `api.py` health_check now uses `Depends(get_cfg)` consistently.
+- **11 duplicate local imports** — `api.py` consolidated to top-level import block.
+
+### Changed
+- **Indicators consolidated to `indicators.py`** — Moved `_ema`, `_rsi` from `ema_rsi.py` and `_sma`, `_rolling_std` from `bollinger_squeeze.py` to `indicators.py` as public functions. Updated imports across 12 strategy files.
+- **Numba JIT on indicator hot paths** — Added `@numba.njit(cache=True)` to `ema()`, `rsi()`, `wilders_smooth()`. Vectorized `true_range()`. Expected 10-50x speedup on Optuna trials.
+- **Dead code removal** — `mtf_ema_alignment.py` dead variable, `donchian_breakout.py` unused constant, `rsi_mean_reversion.py` docstring updated to REJECTED status.
+
+### Added
+- **39 new tests** (133 → 172):
+  - 5 strategy test files: `test_ema_rsi.py`, `test_adx_ema.py`, `test_macd_trend.py`, `test_supertrend.py`, `test_rsi2_reversal.py`
+  - Pipeline core: `test_pipeline.py` — gate sequence, GateResult, run_next_gate DB routing
+
+---
+
 ## [2026-03-09] — SCREEN Gate OOS Fix + Warmup Guards + Lint Cleanup
 
 ### Fixed
