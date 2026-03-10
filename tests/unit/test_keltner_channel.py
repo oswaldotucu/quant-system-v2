@@ -12,11 +12,22 @@ import pandas as pd
 from quant.strategies.keltner_channel import KeltnerChannelStrategy
 
 
+def _signal_params() -> dict:
+    """Params tuned to produce signals on synthetic sample_ohlcv.
+
+    Default multiplier (1.5) is too wide for the low-volatility fixture;
+    0.1 produces plenty of breakout signals for testing signal logic.
+    """
+    params = KeltnerChannelStrategy.default_params()
+    params["multiplier"] = 0.1
+    return params
+
+
 class TestGeneratesSignals:
-    """Keltner Channel must produce non-zero entries on realistic synthetic data."""
+    """Keltner Channel must produce non-zero entries on synthetic data."""
 
     def test_generates_signals(self, sample_ohlcv: pd.DataFrame) -> None:
-        params = KeltnerChannelStrategy.default_params()
+        params = _signal_params()
         entries, exits, direction = KeltnerChannelStrategy.generate(sample_ohlcv, params)
 
         assert entries.shape == (len(sample_ohlcv),)
@@ -26,19 +37,27 @@ class TestGeneratesSignals:
         assert exits.dtype == bool
         assert direction.dtype == bool
 
-        # Must produce at least some signals on 78K bars of synthetic data
         n_entries = int(np.sum(entries))
         assert n_entries > 0, "Expected non-zero entry signals on sample data"
+
+    def test_no_entries_in_warmup_zone(self, sample_ohlcv: pd.DataFrame) -> None:
+        """Warmup guard must suppress all signals in the first max(kc_period, atr_period) bars."""
+        params = _signal_params()
+        entries, _exits, _direction = KeltnerChannelStrategy.generate(sample_ohlcv, params)
+
+        warmup = max(params["kc_period"], params["atr_period"])
+        assert not np.any(entries[:warmup]), (
+            f"Found entries in warmup zone (first {warmup} bars)"
+        )
 
 
 class TestDirectionMatchesEntries:
     """Direction array must be True for long entries, False for short entries."""
 
     def test_direction_array_matches_entries(self, sample_ohlcv: pd.DataFrame) -> None:
-        params = KeltnerChannelStrategy.default_params()
+        params = _signal_params()
         entries, _exits, direction = KeltnerChannelStrategy.generate(sample_ohlcv, params)
 
-        # Where entries fire, direction must split into longs and shorts
         entry_indices = np.where(entries)[0]
         assert len(entry_indices) > 0, "Need entries to verify direction"
 
@@ -73,7 +92,7 @@ class TestEmptyData:
         assert len(direction) == 0
 
     def test_single_bar(self) -> None:
-        """Single bar is below MIN_BARS_FOR_SIGNALS — returns zeros."""
+        """Single bar is within warmup period — returns zeros."""
         data = pd.DataFrame(
             {
                 "open": [100.0],
@@ -91,7 +110,7 @@ class TestEmptyData:
         assert not np.any(exits)
 
     def test_two_bars(self) -> None:
-        """Two bars is below MIN_BARS_FOR_SIGNALS — returns zeros."""
+        """Two bars is within warmup period — returns zeros."""
         data = pd.DataFrame(
             {
                 "open": [100.0, 101.0],

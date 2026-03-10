@@ -22,13 +22,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema
-from quant.strategies.indicators import atr_wilder
+from quant.strategies.indicators import atr_wilder, ema
 
 log = logging.getLogger(__name__)
-
-# Minimum bars needed to compute indicators before signals are valid
-MIN_BARS_FOR_SIGNALS = 3
 
 
 class KeltnerChannelStrategy:
@@ -64,17 +60,14 @@ class KeltnerChannelStrategy:
         low: np.ndarray = np.asarray(data["low"].values)
         n = len(close)
 
-        if n < MIN_BARS_FOR_SIGNALS:
-            log.warning(
-                "Insufficient data for Keltner Channel: %d bars (need >= %d)",
-                n,
-                MIN_BARS_FOR_SIGNALS,
-            )
+        # Early return: need at least warmup bars for indicators to converge
+        warmup = max(params["kc_period"], params["atr_period"])
+        if n <= warmup:
             zeros = np.zeros(n, dtype=bool)
             return zeros, zeros.copy(), zeros.copy()
 
         # Indicators
-        middle = _ema(close, params["kc_period"])
+        middle = ema(close, params["kc_period"])
         atr = atr_wilder(high, low, close, params["atr_period"])
 
         upper_band = middle + params["multiplier"] * atr
@@ -86,9 +79,13 @@ class KeltnerChannelStrategy:
         ema_rising[1:] = middle[1:] > middle[:-1]
         ema_falling[1:] = middle[1:] < middle[:-1]
 
+        # Warmup guard: EMA and ATR need convergence period
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+
         # Breakout signals
-        long_entries = (close > upper_band) & ema_rising
-        short_entries = (close < lower_band) & ema_falling
+        long_entries = (close > upper_band) & ema_rising & valid
+        short_entries = (close < lower_band) & ema_falling & valid
 
         entries = long_entries | short_entries
         direction = long_entries  # True = long, False = short (where entries is True)

@@ -67,10 +67,16 @@ class VolatilityBreakoutStrategy:
             else:
                 squeeze_count[i] = 0
 
-        # Breakout after sufficient squeeze
-        was_in_squeeze = squeeze_count >= min_squeeze_bars
-        long_entries = was_in_squeeze & (close > bb_upper)
-        short_entries = was_in_squeeze & (close < bb_lower)
+        # Breakout after sufficient squeeze — use prior bar's count to avoid look-ahead
+        was_in_squeeze = np.zeros(n, dtype=bool)
+        was_in_squeeze[1:] = squeeze_count[:-1] >= min_squeeze_bars  # prior bar's count
+
+        # Warmup guard: BB needs bb_period bars; avg_bb_width needs bb_period * 2
+        valid = np.zeros(n, dtype=bool)
+        valid[bb_period * 2 :] = True
+
+        long_entries = was_in_squeeze & (close > bb_upper) & valid
+        short_entries = was_in_squeeze & (close < bb_lower) & valid
 
         entries = long_entries | short_entries
         direction = long_entries
