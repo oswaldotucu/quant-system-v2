@@ -24,9 +24,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.bollinger_squeeze import _rolling_std, _sma
-from quant.strategies.ema_rsi import _rsi
-from quant.strategies.indicators import atr_wilder
+from quant.strategies.indicators import atr_wilder, rolling_std, rsi, sma
 
 log = logging.getLogger(__name__)
 
@@ -75,11 +73,11 @@ class RsiBollingerFilteredStrategy:
             return zeros.copy(), zeros.copy(), zeros.copy()
 
         # --- Indicators ---
-        rsi = _rsi(close, rsi_period)
-        sma = _sma(close, bb_period)
-        std = _rolling_std(close, bb_period)
-        bb_upper = sma + bb_std * std
-        bb_lower = sma - bb_std * std
+        rsi_vals = rsi(close, rsi_period)
+        sma_vals = sma(close, bb_period)
+        std = rolling_std(close, bb_period)
+        bb_upper = sma_vals + bb_std * std
+        bb_lower = sma_vals - bb_std * std
 
         # --- Regime filter (ATR percentile) ---
         atr = atr_wilder(high, low, close, atr_period)
@@ -90,8 +88,8 @@ class RsiBollingerFilteredStrategy:
         valid = np.zeros(n, dtype=bool)
         valid[warmup:] = True
 
-        long_entries = (rsi < rsi_os) & (close < bb_lower) & low_atr & valid
-        short_entries = (rsi > rsi_ob) & (close > bb_upper) & low_atr & valid
+        long_entries = (rsi_vals < rsi_os) & (close < bb_lower) & low_atr & valid
+        short_entries = (rsi_vals > rsi_ob) & (close > bb_upper) & low_atr & valid
 
         entries = long_entries | short_entries
         direction = long_entries

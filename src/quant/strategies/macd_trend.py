@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema
+from quant.strategies.indicators import ema
 
 
 class MacdTrendStrategy:
@@ -53,11 +53,11 @@ class MacdTrendStrategy:
         macd_sig = params["macd_signal"]
         trend_period = params["trend_ema"]
 
-        ema_fast = _ema(close, macd_fast)
-        ema_slow = _ema(close, macd_slow)
+        ema_fast = ema(close, macd_fast)
+        ema_slow = ema(close, macd_slow)
         macd_line = ema_fast - ema_slow
-        signal_line = _ema(macd_line, macd_sig)
-        trend_ema = _ema(close, trend_period)
+        signal_line = ema(macd_line, macd_sig)
+        trend_ema = ema(close, trend_period)
 
         # MACD crossovers
         cross_up = (macd_line[1:] > signal_line[1:]) & (macd_line[:-1] <= signal_line[:-1])

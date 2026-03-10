@@ -35,14 +35,14 @@ class TestDirectionMatchesEntries:
 
     def test_crossover_at_entries(self, sample_ohlcv: pd.DataFrame) -> None:
         """Long entries must have fast EMA > slow EMA."""
-        from quant.strategies.ema_rsi import _ema
+        from quant.strategies.indicators import ema
 
         params = MtfEmaAlignmentStrategy.default_params()
         entries, _, direction = MtfEmaAlignmentStrategy.generate(sample_ohlcv, params)
 
         close = sample_ohlcv["close"].values
-        fast = _ema(close, params["fast_ema"])
-        slow = _ema(close, params["slow_ema"])
+        fast = ema(close, params["fast_ema"])
+        slow = ema(close, params["slow_ema"])
 
         long_mask = entries & direction
         if long_mask.sum() > 0:

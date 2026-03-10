@@ -20,7 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema
+from quant.strategies.indicators import ema
 
 log = logging.getLogger(__name__)
 
@@ -57,8 +57,8 @@ class MtfEmaAlignmentStrategy:
             return zeros.copy(), zeros.copy(), zeros.copy()
 
         # --- 15m EMAs ---
-        fast_ema = _ema(close, fast_period)
-        slow_ema = _ema(close, slow_period)
+        fast_ema = ema(close, fast_period)
+        slow_ema = ema(close, slow_period)
 
         # EMA crossover: fast crosses above/below slow
         fast_above = fast_ema > slow_ema
@@ -73,8 +73,7 @@ class MtfEmaAlignmentStrategy:
             zeros = np.zeros(n, dtype=bool)
             return zeros.copy(), zeros.copy(), zeros.copy()
 
-        htf_ema_vals = _ema(htf_close.values, htf_period)
-        htf_ema_series = pd.Series(htf_ema_vals, index=htf_close.index)
+        htf_ema_vals = ema(htf_close.values, htf_period)
 
         # Slope: current 1h EMA > previous 1h EMA
         htf_slope = pd.Series(np.zeros(len(htf_ema_vals)), index=htf_close.index)
@@ -85,7 +84,6 @@ class MtfEmaAlignmentStrategy:
         # at 10:00 using the 10:45 close — giving 10:00/10:15/10:30 bars
         # access to future data (look-ahead bias). Shifting ensures each
         # hour's EMA is only visible after the hour fully closes.
-        _htf_ema_15m = htf_ema_series.shift(1).reindex(data.index, method="ffill")  # noqa: F841
         htf_slope_15m = htf_slope.shift(1).reindex(data.index, method="ffill")
 
         slope_up = htf_slope_15m.values > 0

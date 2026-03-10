@@ -20,9 +20,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.bollinger_squeeze import _rolling_std, _sma
-from quant.strategies.ema_rsi import _ema, _rsi
-from quant.strategies.indicators import atr_wilder
+from quant.strategies.indicators import atr_wilder, ema, rolling_std, rsi, sma
 
 log = logging.getLogger(__name__)
 
@@ -81,8 +79,8 @@ class RegimeSwitchStrategy:
         low_atr = ~high_atr
 
         # --- Trend signals (EMA crossover) ---
-        fast_ema = _ema(close, trend_fast)
-        slow_ema = _ema(close, trend_slow)
+        fast_ema = ema(close, trend_fast)
+        slow_ema = ema(close, trend_slow)
 
         trend_long = np.zeros(n, dtype=bool)
         trend_short = np.zeros(n, dtype=bool)
@@ -91,14 +89,14 @@ class RegimeSwitchStrategy:
         trend_short[1:] = ~fast_above[1:] & fast_above[:-1]
 
         # --- Reversion signals (RSI + Bollinger Band) ---
-        rsi = _rsi(close, rev_rsi_period)
-        sma = _sma(close, rev_bb_period)
-        std = _rolling_std(close, rev_bb_period)
-        bb_lower = sma - rev_bb_std * std
-        bb_upper = sma + rev_bb_std * std
+        rsi_vals = rsi(close, rev_rsi_period)
+        sma_vals = sma(close, rev_bb_period)
+        std = rolling_std(close, rev_bb_period)
+        bb_lower = sma_vals - rev_bb_std * std
+        bb_upper = sma_vals + rev_bb_std * std
 
-        rev_long = (rsi < rev_rsi_os) & (close < bb_lower)
-        rev_short = (rsi > rev_rsi_ob) & (close > bb_upper)
+        rev_long = (rsi_vals < rev_rsi_os) & (close < bb_lower)
+        rev_short = (rsi_vals > rev_rsi_ob) & (close > bb_upper)
 
         # --- Combine by regime ---
         valid = np.zeros(n, dtype=bool)

@@ -17,6 +17,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from quant.strategies.indicators import ema, rsi
+
 
 class EmaRsiStrategy:
     name = "ema_rsi"
@@ -56,18 +58,18 @@ class EmaRsiStrategy:
         close = data["close"].values
         n = len(close)
 
-        ema_fast = _ema(close, params["ema_fast"])
-        ema_slow = _ema(close, params["ema_slow"])
-        rsi = _rsi(close, params["rsi_period"])
+        ema_fast = ema(close, params["ema_fast"])
+        ema_slow = ema(close, params["ema_slow"])
+        rsi_vals = rsi(close, params["rsi_period"])
 
         trend_up = ema_fast > ema_slow
         trend_dn = ema_fast < ema_slow
 
         # RSI crosses: was below threshold, now above (for longs)
-        rsi_cross_up = (rsi[1:] >= params["rsi_os"]) & (rsi[:-1] < params["rsi_os"])
+        rsi_cross_up = (rsi_vals[1:] >= params["rsi_os"]) & (rsi_vals[:-1] < params["rsi_os"])
         rsi_cross_up = np.concatenate([[False], rsi_cross_up])
 
-        rsi_cross_dn = (rsi[1:] <= params["rsi_ob"]) & (rsi[:-1] > params["rsi_ob"])
+        rsi_cross_dn = (rsi_vals[1:] <= params["rsi_ob"]) & (rsi_vals[:-1] > params["rsi_ob"])
         rsi_cross_dn = np.concatenate([[False], rsi_cross_dn])
 
         # Warmup guard: EMA/RSI are under-converged before this point
@@ -85,52 +87,3 @@ class EmaRsiStrategy:
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction
-
-
-# ---------------------------------------------------------------------------
-# Technical indicator helpers (dependency-free, use only numpy)
-# ---------------------------------------------------------------------------
-
-
-def _ema(close: np.ndarray, period: int) -> np.ndarray:
-    """Exponential moving average."""
-    alpha = 2.0 / (period + 1)
-    result = np.empty_like(close)
-    result[0] = close[0]
-    for i in range(1, len(close)):
-        result[i] = alpha * close[i] + (1 - alpha) * result[i - 1]
-    return result
-
-
-def _rsi(close: np.ndarray, period: int) -> np.ndarray:
-    """RSI using Wilder's smoothing (result always in [0, 100])."""
-    n = len(close)
-    rsi = np.full(n, 50.0)  # neutral until enough bars
-
-    if n <= period:
-        return rsi
-
-    delta = np.diff(close)  # length n-1
-    gains = np.maximum(delta, 0.0)
-    losses = np.maximum(-delta, 0.0)
-
-    # Seed: simple average of the first `period` bars
-    avg_gain = gains[:period].mean()
-    avg_loss = losses[:period].mean()
-
-    # First valid RSI value (at index `period`)
-    if avg_loss == 0.0:
-        rsi[period] = 100.0
-    else:
-        rsi[period] = 100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
-
-    # Wilder's smoothing for the rest
-    for i in range(period, n - 1):
-        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-        if avg_loss == 0.0:
-            rsi[i + 1] = 100.0
-        else:
-            rsi[i + 1] = 100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
-
-    return rsi

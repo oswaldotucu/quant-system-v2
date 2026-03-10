@@ -19,12 +19,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema
+from quant.strategies.indicators import ema
 
 log = logging.getLogger(__name__)
-
-# Minimum bars required to compute the channel (entry_period lookback + 1 for cross)
-MIN_BARS_FOR_SIGNAL = 3
 
 
 class DonchianBreakoutStrategy:
@@ -84,10 +81,10 @@ class DonchianBreakoutStrategy:
 
         # ----- Optional trend filter -----
         if use_trend_filter:
-            ema = _ema(close, trend_ema_period)
+            ema_vals = ema(close, trend_ema_period)
             # Long only when price is above EMA; short only when below
-            long_entries = long_entries & (close > ema)
-            short_entries = short_entries & (close < ema)
+            long_entries = long_entries & (close > ema_vals)
+            short_entries = short_entries & (close < ema_vals)
 
         entries = long_entries | short_entries
         direction = long_entries  # True = long, False = short (where entries is True)

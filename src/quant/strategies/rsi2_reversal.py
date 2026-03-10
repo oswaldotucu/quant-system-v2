@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema, _rsi
+from quant.strategies.indicators import ema, rsi
 
 
 class Rsi2ReversalStrategy:
@@ -48,16 +48,18 @@ class Rsi2ReversalStrategy:
         close = data["close"].values
         n = len(close)
 
-        rsi = _rsi(close, params["rsi_period"])
-        trend = _ema(close, params["trend_ema"])
+        rsi_vals = rsi(close, params["rsi_period"])
+        trend = ema(close, params["trend_ema"])
 
         rsi_os = params["rsi_os"]
         rsi_ob = params["rsi_ob"]
 
         # Long: RSI crosses UP through oversold level (exits oversold) AND price above trend
-        long_entries = (rsi[1:] >= rsi_os) & (rsi[:-1] < rsi_os) & (close[1:] > trend[1:])
-        # Short: RSI crosses DOWN through overbought level (exits overbought) AND price below trend
-        short_entries = (rsi[1:] <= rsi_ob) & (rsi[:-1] > rsi_ob) & (close[1:] < trend[1:])
+        long_entries = (rsi_vals[1:] >= rsi_os) & (rsi_vals[:-1] < rsi_os) & (close[1:] > trend[1:])
+        # Short: RSI crosses DOWN through overbought (exits overbought) AND price below trend
+        short_entries = (
+            (rsi_vals[1:] <= rsi_ob) & (rsi_vals[:-1] > rsi_ob) & (close[1:] < trend[1:])
+        )
 
         entries = np.concatenate([[False], long_entries | short_entries])
         direction = np.concatenate([[True], long_entries])

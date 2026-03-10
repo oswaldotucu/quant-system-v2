@@ -1,11 +1,9 @@
-"""RSI Mean Reversion strategy — CANDIDATE (testing in V1 Optuna).
+"""RSI Mean Reversion strategy — REJECTED (no IS edge in V2 Optuna sweep).
 
-DO NOT USE until OOS PF >= 1.5 is confirmed. NOT in STRATEGY_REGISTRY yet.
+Tested 2026-03-09: all Optuna trials returned 0. Warmup guard confirmed
+functional but strategy lacks sufficient signal density for IS-train PF >= 1.1.
 
-Logic:
-- Long:  RSI drops below rsi_oversold, next bar RSI crosses back up above it
-- Short: RSI rises above rsi_overbought, next bar RSI crosses back below it
-- TP/SL: pct-based, handled by backtest engine
+Not in STRATEGY_REGISTRY. Kept as reference implementation.
 """
 
 from __future__ import annotations
@@ -15,7 +13,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema, _rsi  # noqa: F401 -- shared helpers
+from quant.strategies.indicators import rsi
 
 
 class RsiMeanReversionStrategy:
@@ -42,15 +40,18 @@ class RsiMeanReversionStrategy:
         close = data["close"].values
         n = len(close)
 
-        rsi = _rsi(close, params["rsi_period"])
+        rsi_vals = rsi(close, params["rsi_period"])
 
         # Long: RSI was below oversold, now crosses back above
-        long_entries = (rsi[1:] >= params["rsi_oversold"]) & (rsi[:-1] < params["rsi_oversold"])
+        long_entries = (
+            (rsi_vals[1:] >= params["rsi_oversold"])
+            & (rsi_vals[:-1] < params["rsi_oversold"])
+        )
         long_entries = np.concatenate([[False], long_entries])
 
         # Short: RSI was above overbought, now crosses back below
-        short_entries = (rsi[1:] <= params["rsi_overbought"]) & (
-            rsi[:-1] > params["rsi_overbought"]
+        short_entries = (rsi_vals[1:] <= params["rsi_overbought"]) & (
+            rsi_vals[:-1] > params["rsi_overbought"]
         )
         short_entries = np.concatenate([[False], short_entries])
 

@@ -18,8 +18,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from quant.strategies.ema_rsi import _ema
-from quant.strategies.indicators import true_range, wilders_smooth
+from quant.strategies.indicators import ema, true_range, wilders_smooth
 
 
 def _adx(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int) -> np.ndarray:
@@ -87,8 +86,8 @@ class AdxEmaStrategy:
         low = data["low"].values
         n = len(close)
 
-        fast = _ema(close, params["ema_fast"])
-        slow = _ema(close, params["ema_slow"])
+        fast = ema(close, params["ema_fast"])
+        slow = ema(close, params["ema_slow"])
         adx = _adx(high, low, close, params["adx_period"])
 
         threshold = params["adx_threshold"]

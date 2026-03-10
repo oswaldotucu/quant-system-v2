@@ -20,6 +20,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from quant.strategies.indicators import rolling_std, sma
+
 log = logging.getLogger(__name__)
 
 
@@ -78,16 +80,16 @@ class BollingerSqueezeStrategy:
             return zeros.copy(), zeros.copy(), zeros.copy()
 
         # --- Bollinger Bands ---
-        sma = _sma(close, bb_period)
-        std = _rolling_std(close, bb_period)
+        sma_vals = sma(close, bb_period)
+        std = rolling_std(close, bb_period)
 
-        upper = sma + bb_std * std
-        lower = sma - bb_std * std
+        upper = sma_vals + bb_std * std
+        lower = sma_vals - bb_std * std
 
         # Bandwidth: (upper - lower) / middle
         # Avoid division by zero where SMA is 0 (shouldn't happen with real prices)
         with np.errstate(divide="ignore", invalid="ignore"):
-            bandwidth = np.where(sma != 0.0, (upper - lower) / sma, 0.0)
+            bandwidth = np.where(sma_vals != 0.0, (upper - lower) / sma_vals, 0.0)
 
         # --- Squeeze detection ---
         # A bar is "in squeeze" when bandwidth < squeeze_threshold
@@ -121,35 +123,3 @@ class BollingerSqueezeStrategy:
         exits = np.zeros(n, dtype=bool)
 
         return entries, exits, direction
-
-
-# ---------------------------------------------------------------------------
-# Internal helper functions (pure numpy, no pandas)
-# ---------------------------------------------------------------------------
-
-
-def _sma(arr: np.ndarray, period: int) -> np.ndarray:
-    """Simple moving average. First (period-1) values are NaN-filled with 0."""
-    n = len(arr)
-    result = np.zeros(n)
-    if n < period:
-        return result
-    # Cumulative sum trick for O(n) SMA
-    cumsum = np.cumsum(arr)
-    result[period - 1] = cumsum[period - 1] / period
-    result[period:] = (cumsum[period:] - cumsum[:-period]) / period
-    return result
-
-
-def _rolling_std(arr: np.ndarray, period: int) -> np.ndarray:
-    """Rolling standard deviation (ddof=1). First (period-1) values are 0."""
-    n = len(arr)
-    result = np.zeros(n)
-    if n < period:
-        return result
-    # Use pandas for correctness on rolling std with ddof=1
-    s = pd.Series(arr)
-    rolling: np.ndarray = np.asarray(s.rolling(period).std(ddof=1).values)
-    # Replace NaN with 0 for the warmup period
-    result[:] = np.nan_to_num(rolling, nan=0.0)
-    return result
