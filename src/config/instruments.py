@@ -37,9 +37,6 @@ MARGIN_EST: dict[str, float] = {
     "GC": 8_000,
 }
 
-# Commission per round-trip: NinjaTrader fees + exchange + slippage
-COMMISSION_RT: float = 3.40  # USD
-
 # Tickers by contract class
 MICRO_TICKERS: list[str] = ["MNQ", "MES", "MGC"]
 MINI_TICKERS: list[str] = ["NQ", "ES", "GC"]

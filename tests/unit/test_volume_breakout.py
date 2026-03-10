@@ -38,12 +38,13 @@ class TestDirectionMatchesEntries:
         assert total > 0
 
     def test_volume_spike_at_entries(self, sample_ohlcv: pd.DataFrame) -> None:
-        """All entries must occur on bars with above-average volume."""
+        """All entries must occur on bars with above-average volume (excluding current bar)."""
         params = VolumeBreakoutStrategy.default_params()
         entries, _, _ = VolumeBreakoutStrategy.generate(sample_ohlcv, params)
 
         volume = sample_ohlcv["volume"].values.astype(float)
-        avg_vol = pd.Series(volume).rolling(params["vol_period"]).mean().values
+        # .shift(1) excludes the current bar from the rolling average (no self-reference)
+        avg_vol = pd.Series(volume).rolling(params["vol_period"]).mean().shift(1).values
 
         entry_mask = entries & ~np.isnan(avg_vol)
         if entry_mask.sum() > 0:

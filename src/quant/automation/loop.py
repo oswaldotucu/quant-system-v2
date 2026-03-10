@@ -139,7 +139,7 @@ class AutomationLoop:
                                 exp_id=exp.id,
                                 strategy=exp.strategy,
                                 ticker=exp.ticker,
-                                oos_pf=exp.oos_pf or 0.0,
+                                oos_pf=exp.oos_pf if exp.oos_pf is not None else 0.0,
                             )
                     except Exception as e:
                         log.error(

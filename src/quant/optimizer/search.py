@@ -101,7 +101,7 @@ def run_optuna(
                 exp_id=exp_id,
                 trial_num=trial.number,
                 params=trial.params,
-                is_sharpe=trial.value or 0.0,
+                is_sharpe=trial.value if trial.value is not None else 0.0,
                 is_train_pf=trial.user_attrs.get("is_train_pf", 0.0),
                 is_val_pf=trial.user_attrs.get("is_val_pf", 0.0),
                 state="complete" if trial.state == optuna.trial.TrialState.COMPLETE else "pruned",

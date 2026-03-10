@@ -44,6 +44,10 @@ def monte_carlo(
     Returns:
         MCResult with P(ruin), P(positive), and percentile returns
     """
+    if len(trade_pnl) == 0:
+        return MCResult(p_ruin=1.0, p_positive=0.0, n_simulations=0,
+                        median_return=0.0, pct_5=0.0, pct_95=0.0)
+
     if len(trade_pnl) < 10:
         log.warning("Monte Carlo: only %d trades — results unreliable", len(trade_pnl))
 

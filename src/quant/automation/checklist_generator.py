@@ -25,10 +25,14 @@ def generate_checklist(exp: Experiment) -> Path:
     cfg = get_settings()
     params = exp.params or {}
 
+    oos_pf_display = exp.oos_pf if exp.oos_pf is not None else "N/A"
+    daily_pnl = exp.daily_pnl if exp.daily_pnl is not None else 0
+    max_dd_stop = abs(exp.oos_pf if exp.oos_pf is not None else 1) * 500
+
     content = f"""# Forward Test Checklist
 Strategy: {exp.strategy} | Ticker: {exp.ticker} | Timeframe: {exp.timeframe}
 Generated: {date.today()} | Experiment ID: {exp.id}
-OOS PF: {exp.oos_pf or "N/A"} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
+OOS PF: {oos_pf_display} | OOS Daily PnL: ${daily_pnl:.2f}
 
 ---
 
@@ -38,7 +42,7 @@ OOS PF: {exp.oos_pf or "N/A"} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
 - [ ] Load Pine Script from data/pine_scripts/
 - [ ] Apply to {exp.ticker} {exp.timeframe} chart
 - [ ] Backtest in TradingView from 2024-01-01 to present
-- [ ] Confirm OOS PF is within 5% of {exp.oos_pf or "N/A"}
+- [ ] Confirm OOS PF is within 5% of {oos_pf_display}
 - [ ] Verify commission is set to $1.70/side (cash_per_contract)
 
 ### Broker Setup
@@ -52,7 +56,7 @@ OOS PF: {exp.oos_pf or "N/A"} | OOS Daily PnL: ${exp.daily_pnl or 0:.2f}
 - [ ] Max daily loss: $300 (3x average losing day)
 - [ ] Max weekly loss: $700
 - [ ] Kill switch: if 5 consecutive losses, pause and review
-- [ ] Max drawdown before stopping: ${abs(exp.oos_pf or 1) * 500:.0f} (based on OOS max DD)
+- [ ] Max drawdown before stopping: ${max_dd_stop:.0f} (based on OOS max DD)
 
 ---
 

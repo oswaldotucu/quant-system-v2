@@ -14,7 +14,8 @@ from typing import Any
 
 import pandas as pd
 
-from config.instruments import COMMISSION_RT, CONTRACT_MULT
+from config.instruments import CONTRACT_MULT
+from config.settings import get_settings
 from quant.engine.metrics import (
     BacktestResult,
     calmar,
@@ -65,7 +66,10 @@ def run_backtest(
     short_entries = entries & ~direction
 
     mult = CONTRACT_MULT.get(ticker, 1.0)
-    commission_per_side = COMMISSION_RT / 2  # vectorbt charges per side
+    cfg = get_settings()
+    commission_per_side = cfg.commission_rt / 2  # vectorbt charges per side
+
+    median_price = data["close"].median()
 
     pf_vbt = vbt.Portfolio.from_signals(
         data["close"],
@@ -75,7 +79,7 @@ def run_backtest(
         short_exits=exits,
         tp_stop=params.get("tp_pct", 1.0) / 100,
         sl_stop=params.get("sl_pct", 2.8) / 100,
-        fees=commission_per_side / data["close"].median(),  # as fraction of median price
+        fees=commission_per_side / median_price if median_price != 0 else 0.0,
         freq="1min",  # vectorbt needs freq for time-based metrics
         size=1.0,
         size_type="amount",
@@ -101,7 +105,15 @@ def run_backtest(
     pf_val = pf(trade_pnl)
     sh = sharpe(daily)
     so = sortino(daily)
-    annual_ret_pct = (sum(trade_pnl) / max(abs(dd_usd), 1)) * 100 if dd_usd != 0 else 0.0
+    # Calculate trading period in years for annualized return
+    if len(data) > 1:
+        trading_days = (data.index[-1] - data.index[0]).days
+        years = max(trading_days / 365.25, 1 / 365.25)  # at least 1 day
+    else:
+        years = 1.0
+
+    total_return_pct = (sum(trade_pnl) / max(abs(dd_usd), 1)) * 100 if dd_usd != 0 else 0.0
+    annual_ret_pct = total_return_pct / years
     cal = calmar(annual_ret_pct, abs(dd_pct))
     d_pnl = daily_pnl_usd(trade_pnl, oos_start, oos_end)
 

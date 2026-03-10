@@ -58,7 +58,7 @@ class VolumeBreakoutStrategy:
             return zeros.copy(), zeros.copy(), zeros.copy()
 
         # Rolling average volume
-        avg_vol = pd.Series(volume).rolling(vol_period).mean().values
+        avg_vol = pd.Series(volume).rolling(vol_period).mean().shift(1).values
 
         # Session high/low (rolling window, shifted to exclude current bar)
         session_high = pd.Series(high).rolling(session_lookback).max().shift(1).values
