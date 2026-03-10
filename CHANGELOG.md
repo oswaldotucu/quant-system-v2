@@ -40,6 +40,19 @@ Format: [date] | component | what changed | why.
 - `docs/code-quality.md` — Type annotations, error handling, logging, constants patterns.
 - `docs/templates.md` — CHANGELOG and DECISIONS.md format templates.
 
+### Pipeline Run — Full 13-Strategy Sweep (15m, micro futures)
+- **74 experiments** seeded (13 strategies × 3 tickers × 15m, including re-seeds for prior rejections).
+- **SCREEN gate**: 40 rejected (too few trades with default params), 34 advanced to IS_OPT.
+- **IS_OPT (Optuna 300 trials)**: 32 rejected ("no IS edge" — all 300 trials returned 0), 2 passed:
+  - `rsi2_reversal` MNQ: IS-val Sharpe=2.712, IS-val PF=3.577
+  - `supertrend` MES: IS-val Sharpe=2.385, IS-val PF=44.928
+- **OOS_VAL**: Both failed:
+  - `rsi2_reversal` MNQ: OOS PF=1.249 (need≥1.5), 88 trades (need≥100), DD=-4.6%
+  - `supertrend` MES: OOS PF=0.564, 27 trades, DD=-88.4% (classic overfit)
+- **Conclusion**: Warmup guards + proper IS/OOS splits eliminated phantom edges from V1.
+  The V1 ema_rsi "reference" (OOS PF 2.4-6.1) couldn't find ANY valid Optuna trials in V2,
+  confirming those results were driven by unconverged indicator artifacts.
+
 ---
 
 ## [2026-03-08] — NinjaTrader Data Pipeline + Mini Futures Support
