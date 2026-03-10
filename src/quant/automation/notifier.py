@@ -83,8 +83,12 @@ class EventBus:
 def notify_macos(title: str, message: str) -> None:
     """Send a macOS system notification (fire and forget)."""
     try:
-        safe_title = title.replace("\\", "\\\\").replace('"', '\\"')
-        safe_message = message.replace("\\", "\\\\").replace('"', '\\"')
+        safe_title = (
+            title.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
+        )
+        safe_message = (
+            message.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
+        )
         script = f'display notification "{safe_message}" with title "{safe_title}"'
         subprocess.run(["osascript", "-e", script], timeout=2, capture_output=True)  # noqa: S603, S607
     except Exception as e:

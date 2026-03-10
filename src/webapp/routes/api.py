@@ -10,12 +10,15 @@ import json
 import logging
 import os
 import time
+from itertools import accumulate
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from config.instruments import TICKERS, TIMEFRAMES
+from config.settings import Settings
 from db.queries import (
     advance_experiment,
     count_experiments_by_gate,
@@ -27,10 +30,18 @@ from db.queries import (
     list_pending_experiments,
     reject_experiment,
 )
+from quant.automation.checklist_generator import generate_checklist
 from quant.automation.loop import AutomationLoop
+from quant.automation.pine_generator import generate_pine_script
 from quant.automation.seeder import seed
+from quant.data.cache import get_ohlcv
 from quant.data.fetcher import fetch_all
-from quant.strategies.registry import list_strategies
+from quant.data.health import get_data_health
+from quant.data.ingest import ingest
+from quant.data.splitter import oos
+from quant.engine.backtest import run_backtest
+from quant.pipeline.gates import GATE_SEQUENCE
+from quant.strategies.registry import STRATEGY_REGISTRY, get_strategy, list_strategies
 from webapp.deps import get_cfg, get_runner, get_templates
 
 log = logging.getLogger(__name__)
@@ -101,8 +112,6 @@ def trigger_fetch(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
 @router.get("/data/health")
 def data_health(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
     """Return per-file data freshness and gap status."""
-    from quant.data.health import get_data_health
-
     return {"files": get_data_health(cfg.data_dir)}
 
 
@@ -113,8 +122,6 @@ def data_health_html(
     templates: Jinja2Templates = Depends(get_templates),
 ) -> HTMLResponse:
     """Return data health as HTML fragment for HTMX."""
-    from quant.data.health import get_data_health
-
     return templates.TemplateResponse(
         "partials/data_health.html",
         {"request": request, "files": get_data_health(cfg.data_dir)},
@@ -124,8 +131,6 @@ def data_health_html(
 @router.post("/data/ingest")
 def trigger_ingest(cfg: Any = Depends(get_cfg)) -> dict[str, Any]:
     """Trigger NT CSV ingestion from staging folder."""
-    from quant.data.ingest import ingest
-
     if not str(cfg.staging_dir) or str(cfg.staging_dir) == ".":
         raise HTTPException(status_code=400, detail="STAGING_DIR not configured in .env")
     if not cfg.staging_dir.exists():
@@ -253,9 +258,6 @@ async def seed_experiments(
     timeframes: list[str] = Form(...),
     priority: int = Form(0),
 ) -> dict[str, Any]:
-    from config.instruments import TICKERS, TIMEFRAMES
-    from quant.strategies.registry import STRATEGY_REGISTRY
-
     if strategy not in STRATEGY_REGISTRY:
         raise HTTPException(
             status_code=400,
@@ -301,10 +303,6 @@ def run_lab_backtest(
     templates: Jinja2Templates = Depends(get_templates),
 ) -> HTMLResponse:
     """Run an ad-hoc backtest with custom params and date range. Returns HTML fragment."""
-    from quant.data.cache import get_ohlcv
-    from quant.engine.backtest import run_backtest
-    from quant.strategies.registry import get_strategy
-
     try:
         params_dict = json.loads(params)
         strategy_cls = get_strategy(strategy)
@@ -341,8 +339,6 @@ def run_lab_backtest(
 @router.get("/pine/{exp_id}")
 def download_pine(exp_id: int) -> FileResponse:
     """Generate and download Pine Script for an experiment."""
-    from quant.automation.pine_generator import generate_pine_script
-
     exp = get_experiment(exp_id)
     if exp is None:
         raise HTTPException(status_code=404, detail="Experiment not found")
@@ -356,8 +352,6 @@ def download_pine(exp_id: int) -> FileResponse:
 @router.get("/checklist/{exp_id}")
 def download_checklist(exp_id: int) -> FileResponse:
     """Generate and download forward-test checklist for an experiment."""
-    from quant.automation.checklist_generator import generate_checklist
-
     exp = get_experiment(exp_id)
     if exp is None:
         raise HTTPException(status_code=404, detail="Experiment not found")
@@ -388,11 +382,6 @@ async def approve_experiment(exp_id: int) -> dict[str, str]:
 @router.get("/experiments/{exp_id}/equity")
 def experiment_equity(exp_id: int) -> dict[str, Any]:
     """Re-run OOS backtest and return cumulative PnL for equity chart."""
-    from quant.data.cache import get_ohlcv
-    from quant.data.splitter import oos
-    from quant.engine.backtest import run_backtest
-    from quant.strategies.registry import get_strategy
-
     exp = get_experiment(exp_id)
     if exp is None:
         raise HTTPException(status_code=404, detail="Experiment not found")
@@ -405,8 +394,6 @@ def experiment_equity(exp_id: int) -> dict[str, Any]:
     result = run_backtest(strategy_cls, oos_data, exp.params, exp.ticker)
 
     # Build cumulative PnL from trade_pnl
-    from itertools import accumulate
-
     cum_pnl = list(accumulate(result.trade_pnl)) if result.trade_pnl else []
     labels = [f"T{i + 1}" for i in range(len(cum_pnl))]
 
@@ -416,9 +403,6 @@ def experiment_equity(exp_id: int) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Stats and health
 # ---------------------------------------------------------------------------
-
-
-_ALL_GATES = ["SCREEN", "IS_OPT", "OOS_VAL", "CONFIRM", "FWD_READY", "DEPLOYED", "REJECTED"]
 
 
 @router.get("/stats")
@@ -446,7 +430,7 @@ async def pipeline_stats_html(
             "request": request,
             "total": total,
             "by_gate": gate_counts,
-            "all_gates": _ALL_GATES,
+            "all_gates": list(GATE_SEQUENCE.keys()),
         },
     )
 
@@ -455,9 +439,9 @@ async def pipeline_stats_html(
 async def health_check(
     request: Request,
     runner: AutomationLoop = Depends(get_runner),
+    cfg: Settings = Depends(get_cfg),
 ) -> dict[str, Any]:
     """System health endpoint."""
-    cfg = get_cfg()
     start_time: float = getattr(request.app.state, "start_time", time.time())
     uptime = time.time() - start_time
 
