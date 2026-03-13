@@ -49,6 +49,89 @@ the tools, the agents use them.
 
 ---
 
+## ABSOLUTE STANDARDS — NO SHORTCUTS, NO EXCEPTIONS
+
+This system manages real capital. Every line of code can make or lose real money.
+There is zero tolerance for approximations, shortcuts, or "good enough" solutions.
+
+**Mathematical Correctness:**
+- Every formula must be derived from first principles and verified against authoritative sources.
+  Sharpe, Sortino, Calmar, PF, drawdown — get the math right or don't ship it.
+- Statistical tests (Monte Carlo, correlation, walk-forward) must use correct methodology.
+  No hand-waving, no simplified approximations, no "close enough."
+- If you are unsure whether a formula is correct, stop and verify. Do not guess.
+
+**No Silent Failures:**
+- Every error path must be explicit. A crashed check is a FAILED check, never a passed one.
+- Never use `except Exception` to swallow errors into a default value. Catch specific
+  exceptions, log the full context, and fail visibly.
+- If a computation returns an unexpected value (NaN, Inf, negative where impossible),
+  raise immediately. Do not propagate garbage downstream.
+
+**No Implicit Safety:**
+- Never rely on NaN propagation, default values, or type coercion for correctness.
+  Use explicit guards: boolean masks, None checks, boundary validation.
+- Every indicator warmup must have an explicit `valid` mask. Implicit convergence is not
+  a substitute for a guard.
+- Every nullable numeric field must use `if value is not None` — never truthiness checks.
+
+**Verification Before Completion:**
+- Run the full test suite (`make check`) before declaring any task complete.
+- Run the actual system locally and verify endpoints respond correctly.
+- Read back every file you changed and confirm the edit is what you intended.
+- If a fix touches gate logic, backtest math, or IS/OOS boundaries, trace through
+  the entire execution path to confirm correctness end-to-end.
+
+**No Shortcuts Under Pressure:**
+- "It's a small change" is not an excuse to skip tests or review.
+- "It works on my data" is not an excuse to skip edge case analysis.
+- "We can fix it later" is never acceptable. Fix it now or don't merge it.
+- The hardest path that produces the correct result is always preferred over the
+  easy path that produces an approximate result.
+
+---
+
+## MANDATORY CODE REVIEW — EVERY CHANGE, NO EXCEPTIONS
+
+No code reaches completion without passing through the full review pipeline.
+This is not optional. This is not "if there's time." Every change gets reviewed.
+
+**After Every Implementation Task:**
+1. **Code Review** — Dispatch `superpowers:code-reviewer` agent on all modified files.
+   Review for correctness, security, performance, and adherence to project conventions.
+   Every finding rated MEDIUM or above must be fixed before proceeding.
+2. **Silent Failure Hunt** — Dispatch `pr-review-toolkit:silent-failure-hunter` agent.
+   Identify swallowed exceptions, inadequate error handling, and inappropriate fallbacks.
+   No silent failures are acceptable.
+3. **Code Simplification** — Dispatch `pr-review-toolkit:code-simplifier` agent on
+   modified code. Remove unnecessary complexity while preserving all functionality.
+
+**Before Any PR or Merge:**
+4. **Full PR Review** — Dispatch `pr-review-toolkit:code-reviewer` agent against the
+   full diff from the base branch. All HIGH findings must be resolved.
+5. **Type Design Analysis** — If new types/dataclasses were introduced, dispatch
+   `pr-review-toolkit:type-design-analyzer` to verify encapsulation and invariants.
+6. **Test Coverage Analysis** — Dispatch `pr-review-toolkit:pr-test-analyzer` to
+   verify tests adequately cover new functionality and edge cases.
+7. **Comment Accuracy** — Dispatch `pr-review-toolkit:comment-analyzer` on any
+   new or modified docstrings and comments to verify they match the code.
+
+**Automated Quality Gates (run after every implementation, no skipping):**
+- `uv run ruff check src/ tests/` — zero lint violations
+- `uv run ruff format --check src/ tests/` — formatting compliance
+- `uv run pyright src/` — no new type errors introduced
+- `uv run pytest tests/unit/ tests/integration/ --no-cov -q` — all tests pass
+- Run the system locally and verify it starts without errors
+
+**The Review Loop:**
+- If any reviewer finds issues → fix them → re-review. Do not skip the re-review.
+- If a reviewer approves with suggestions → implement suggestions → verify tests still pass.
+- A task is not complete until ALL reviewers approve AND all quality gates pass.
+- "The tests pass" is necessary but not sufficient. Reviews catch what tests cannot:
+  logic errors, design flaws, silent failures, security gaps, and convention violations.
+
+---
+
 ## WHO YOU ARE
 
 You are a senior quant systems engineer and software architect.

@@ -73,8 +73,8 @@ class MacdTrendStrategy:
         entries = np.concatenate([[False], long_entries | short_entries])
         direction = np.concatenate([[True], long_entries])
 
-        # Warmup guard: MACD signal line needs slow EMA + signal smoothing
-        warmup = params["macd_slow"] + params["macd_signal"]
+        # Warmup guard: max of MACD convergence and trend EMA convergence
+        warmup = max(params["macd_slow"] + params["macd_signal"], params["trend_ema"])
         valid = np.zeros(n, dtype=bool)
         valid[warmup:] = True
         entries = entries & valid

@@ -94,6 +94,20 @@ class TestDefaultParams:
         assert params["sl_pct"] < 1.0
 
 
+class TestWarmupGuard:
+    """No entries should fire during warmup period."""
+
+    def test_no_entries_during_warmup(self, sample_ohlcv: pd.DataFrame) -> None:
+        params = MtfEmaAlignmentStrategy.default_params()
+        entries, _, _ = MtfEmaAlignmentStrategy.generate(sample_ohlcv, params)
+
+        # Warmup = max(slow_ema, htf_ema * 4) = max(21, 20*4) = 80
+        warmup = max(params["slow_ema"], params["htf_ema"] * 4)
+        assert not entries[:warmup].any(), (
+            f"Expected no entries during warmup period (first {warmup} bars)"
+        )
+
+
 class TestClassAttributes:
     def test_name(self) -> None:
         assert MtfEmaAlignmentStrategy.name == "mtf_ema_alignment"

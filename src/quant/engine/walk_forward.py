@@ -1,6 +1,6 @@
 """Walk-forward validation.
 
-Tests strategy robustness across 4 anchored time windows.
+Tests strategy robustness across 4 anchored IS-only time windows.
 Params are NOT re-optimized per window — same params tested cold.
 
 A robust strategy is profitable in >= 3 of 4 windows (pass_threshold).
@@ -21,10 +21,10 @@ log = logging.getLogger(__name__)
 
 # Anchored walk-forward windows: (is_start, is_end, oos_start, oos_end)
 WF_WINDOWS = [
-    ("2020-01-01", "2020-12-31", "2021-01-01", "2021-12-31"),
-    ("2020-01-01", "2021-12-31", "2022-01-01", "2022-12-31"),
-    ("2020-01-01", "2022-12-31", "2023-01-01", "2023-12-31"),
-    ("2020-01-01", "2023-12-31", "2024-01-01", "2025-12-31"),
+    ("2020-01-01", "2020-12-31", "2021-01-01", "2021-12-31"),  # Win 1: IS→2020, test→2021
+    ("2020-01-01", "2021-06-30", "2021-07-01", "2022-06-30"),  # Win 2: IS→mid-2021, test→mid-2022
+    ("2020-01-01", "2021-12-31", "2022-01-01", "2022-12-31"),  # Win 3: IS→2021, test→2022
+    ("2020-01-01", "2022-12-31", "2023-01-01", "2023-12-31"),  # Win 4: IS→2022, test→2023
 ]
 
 MIN_TRADES_PER_WINDOW = 20  # window must have at least this many trades to count
@@ -58,7 +58,7 @@ def walk_forward(
 
     Args:
         strategy:        Strategy class
-        data:            Full OHLCV data (must cover 2020-2025)
+        data:            Full OHLCV data (must cover 2020-2023)
         params:          Best params from IS_OPT (NOT re-optimized per window)
         ticker:          For CONTRACT_MULT lookup
         pass_threshold:  Number of profitable windows required to pass

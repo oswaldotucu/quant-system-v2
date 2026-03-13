@@ -89,6 +89,12 @@ class DonchianBreakoutStrategy:
         entries = long_entries | short_entries
         direction = long_entries  # True = long, False = short (where entries is True)
 
+        # Warmup guard: channels need entry_period bars; trend EMA needs convergence too
+        warmup = max(entry_period, trend_ema_period) if use_trend_filter else entry_period
+        valid = np.zeros(n, dtype=bool)
+        valid[warmup:] = True
+        entries = entries & valid
+
         # Exits: handled by TP/SL in backtest engine; emit no explicit exit signals
         exits = np.zeros(n, dtype=bool)
 

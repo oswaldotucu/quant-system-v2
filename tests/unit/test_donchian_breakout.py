@@ -150,3 +150,28 @@ class TestDefaultParams:
     def test_class_attributes(self) -> None:
         assert DonchianBreakoutStrategy.name == "donchian_breakout"
         assert DonchianBreakoutStrategy.family == "trend_following"
+
+
+class TestWarmupGuard:
+    """No entries should fire during warmup period."""
+
+    def test_no_entries_during_warmup(self, sample_ohlcv: pd.DataFrame) -> None:
+        params = DonchianBreakoutStrategy.default_params()
+        entries, _, _ = DonchianBreakoutStrategy.generate(sample_ohlcv, params)
+
+        # With trend filter ON: warmup = max(entry_period, trend_ema) = max(20, 50) = 50
+        warmup = max(params["entry_period"], params["trend_ema"])
+        assert not entries[:warmup].any(), (
+            f"Expected no entries during warmup period (first {warmup} bars)"
+        )
+
+    def test_no_entries_during_warmup_no_filter(self, sample_ohlcv: pd.DataFrame) -> None:
+        params = DonchianBreakoutStrategy.default_params()
+        params["use_trend_filter"] = 0
+        entries, _, _ = DonchianBreakoutStrategy.generate(sample_ohlcv, params)
+
+        # Without trend filter: warmup = entry_period = 20
+        warmup = params["entry_period"]
+        assert not entries[:warmup].any(), (
+            f"Expected no entries during warmup period (first {warmup} bars)"
+        )

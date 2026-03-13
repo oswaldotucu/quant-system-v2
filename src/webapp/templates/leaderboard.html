@@ -90,10 +90,10 @@ function leaderboard() {
       {% for exp in experiments %}
       {
         id: {{ exp.id }},
-        strategy: "{{ exp.strategy }}",
-        ticker: "{{ exp.ticker }}",
-        timeframe: "{{ exp.timeframe }}",
-        gate: "{{ exp.gate }}",
+        strategy: {{ exp.strategy|tojson }},
+        ticker: {{ exp.ticker|tojson }},
+        timeframe: {{ exp.timeframe|tojson }},
+        gate: {{ exp.gate|tojson }},
         oos_pf: {{ exp.oos_pf if exp.oos_pf is not none else 'null' }},
         oos_trades: {{ exp.oos_trades if exp.oos_trades is not none else 'null' }},
         oos_sharpe: {{ exp.oos_sharpe if exp.oos_sharpe is not none else 'null' }},

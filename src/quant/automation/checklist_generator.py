@@ -27,7 +27,7 @@ def generate_checklist(exp: Experiment) -> Path:
 
     oos_pf_display = exp.oos_pf if exp.oos_pf is not None else "N/A"
     daily_pnl = exp.daily_pnl if exp.daily_pnl is not None else 0
-    max_dd_stop = abs(exp.oos_pf if exp.oos_pf is not None else 1) * 500
+    max_dd_stop = abs(exp.oos_max_dd if exp.oos_max_dd is not None else 500) * 1.5
 
     content = f"""# Forward Test Checklist
 Strategy: {exp.strategy} | Ticker: {exp.ticker} | Timeframe: {exp.timeframe}

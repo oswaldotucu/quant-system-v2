@@ -40,8 +40,8 @@ class TestNoEntriesDuringWarmup:
         params = MacdTrendStrategy.default_params()
         entries, _, _ = MacdTrendStrategy.generate(sample_ohlcv, params)
 
-        # Warmup = macd_slow + macd_signal
-        warmup = params["macd_slow"] + params["macd_signal"]
+        # Warmup = max of MACD convergence and trend EMA convergence
+        warmup = max(params["macd_slow"] + params["macd_signal"], params["trend_ema"])
         assert not entries[:warmup].any(), (
             f"Expected no entries during warmup period (first {warmup} bars)"
         )
