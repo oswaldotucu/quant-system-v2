@@ -82,6 +82,13 @@ def run_backtest(
     cfg = get_settings()
     idx = pd.DatetimeIndex(data.index)
 
+    if cfg.time_exit and not cfg.session_filter:
+        log.warning(
+            "time_exit=True without session_filter=True: entries outside session hours "
+            "will be force-closed at %d:00 ET",
+            cfg.exit_time_et,
+        )
+
     if cfg.session_filter:
         session_mask = make_session_mask(idx, cfg.session_start_et, cfg.session_end_et)
         entries = entries & session_mask
@@ -129,6 +136,11 @@ def run_backtest(
     commission_per_side = cfg.commission_rt / 2  # vectorbt charges per side
 
     median_price = data["close"].median()
+    if np.isnan(median_price) or median_price == 0:
+        raise ValueError(
+            f"Cannot compute fees: median close price is {median_price}. "
+            "Data may be corrupt (all NaN or zero prices)."
+        )
 
     pf_kwargs: dict[str, Any] = dict(
         entries=long_entries,
@@ -137,11 +149,7 @@ def run_backtest(
         short_exits=exits,
         tp_stop=params.get("tp_pct", 1.0) / 100,
         sl_stop=params.get("sl_pct", 2.8) / 100,
-        fees=(
-            commission_per_side / median_price
-            if (median_price != 0 and not np.isnan(median_price))
-            else 0.0
-        ),
+        fees=commission_per_side / median_price,
         freq="1min",  # vectorbt needs freq for time-based metrics
         size=1.0,
         size_type="amount",

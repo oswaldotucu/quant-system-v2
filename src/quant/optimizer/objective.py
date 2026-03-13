@@ -21,6 +21,7 @@ import pandas as pd
 from quant.data.splitter import is_train, is_val, validate_no_oos_leak
 from quant.engine.backtest import run_backtest
 from quant.optimizer.param_space import get_param_space
+from quant.strategies.level_breakout import FILTER_FUNCTIONS, LEVEL_FUNCTIONS
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,19 @@ def parse_level_notes(notes: str | None) -> dict[str, str]:
             result["level_type"] = value
         elif key == "filter":
             result["filter_type"] = value
+    if "level_type" in result:
+        if result["level_type"] not in LEVEL_FUNCTIONS:
+            raise ValueError(
+                f"Invalid level_type '{result['level_type']}' in notes. "
+                f"Valid: {sorted(LEVEL_FUNCTIONS.keys())}"
+            )
+    if "filter_type" in result:
+        valid_filters = set(FILTER_FUNCTIONS.keys()) | {"unfiltered"}
+        if result["filter_type"] not in valid_filters:
+            raise ValueError(
+                f"Invalid filter_type '{result['filter_type']}' in notes. "
+                f"Valid: {sorted(valid_filters)}"
+            )
     return result
 
 
