@@ -31,6 +31,8 @@ from quant.engine.metrics import (
 
 log = logging.getLogger(__name__)
 
+_time_exit_warning_emitted = False
+
 try:
     import vectorbt as vbt
 
@@ -82,12 +84,14 @@ def run_backtest(
     cfg = get_settings()
     idx = pd.DatetimeIndex(data.index)
 
-    if cfg.time_exit and not cfg.session_filter:
+    global _time_exit_warning_emitted
+    if cfg.time_exit and not cfg.session_filter and not _time_exit_warning_emitted:
         log.warning(
             "time_exit=True without session_filter=True: entries outside session hours "
             "will be force-closed at %d:00 ET",
             cfg.exit_time_et,
         )
+        _time_exit_warning_emitted = True
 
     if cfg.session_filter:
         session_mask = make_session_mask(idx, cfg.session_start_et, cfg.session_end_et)

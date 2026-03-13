@@ -44,7 +44,7 @@ def _params_with_notes(base_params: dict[str, Any], notes: str | None) -> dict[s
     """
     fixed = parse_level_notes(notes)
     if not fixed:
-        return base_params
+        return dict(base_params)  # defensive copy even when notes are empty
     return {**base_params, **fixed}
 
 

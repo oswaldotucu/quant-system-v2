@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import numpy as np
 import optuna
 import pandas as pd
 
@@ -99,6 +100,15 @@ def build_objective(
 
     train_data = is_train(data)
     val_data = is_val(data)
+
+    # Validate data integrity upfront (before trial loop)
+    train_median = train_data["close"].median()
+    if np.isnan(train_median) or train_median == 0:
+        raise ValueError(f"IS-train data corrupt: median close = {train_median}")
+    val_median = val_data["close"].median()
+    if np.isnan(val_median) or val_median == 0:
+        raise ValueError(f"IS-val data corrupt: median close = {val_median}")
+
     param_space = get_param_space(strategy.name)
     fixed_from_notes = parse_level_notes(notes)
 

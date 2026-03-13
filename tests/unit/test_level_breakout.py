@@ -92,13 +92,13 @@ class TestUnfilteredEntries:
         }
         entries, _, direction, _ = LevelBreakoutStrategy.generate(data, params)
 
-        if entries.sum() > 1:
-            long_count = (entries & direction).sum()
-            short_count = (entries & ~direction).sum()
-            # Both directions should have at least some entries
-            assert long_count > 0 and short_count > 0, (
-                f"Expected both directions, got longs={long_count}, shorts={short_count}"
-            )
+        assert entries.sum() > 1, f"Expected >1 entries for unfiltered mode, got {entries.sum()}"
+        long_count = (entries & direction).sum()
+        short_count = (entries & ~direction).sum()
+        # Both directions should have at least some entries
+        assert long_count > 0 and short_count > 0, (
+            f"Expected both directions, got longs={long_count}, shorts={short_count}"
+        )
 
 
 class TestLevelTypes:
