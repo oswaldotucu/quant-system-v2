@@ -58,8 +58,14 @@ class TestCalmar:
     def test_basic(self) -> None:
         assert calmar(30.0, 10.0) == 3.0
 
-    def test_zero_dd(self) -> None:
-        assert calmar(30.0, 0.0) == 0.0
+    def test_zero_dd_positive_return(self) -> None:
+        assert calmar(30.0, 0.0) == 99.99
+
+    def test_zero_dd_zero_return(self) -> None:
+        assert calmar(0.0, 0.0) == 0.0
+
+    def test_zero_dd_negative_return(self) -> None:
+        assert calmar(-10.0, 0.0) == 0.0
 
 
 class TestMaxConsecutiveLosses:

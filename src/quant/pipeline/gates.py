@@ -280,7 +280,7 @@ def _run_confirm(
             strategy_cls, oos_data, confirm_params, param_space, exp.ticker
         )
     except Exception as e:
-        log.warning("Sensitivity check failed: %s", e)
+        log.error("Sensitivity check CRASHED — treating as FAIL: %s", e, exc_info=True)
         sens = None
 
     # 4. Cross-instrument
@@ -289,13 +289,11 @@ def _run_confirm(
     # 5. Portfolio correlation
     corr = _check_portfolio_correlation(exp, trade_pnl_for_mc)
 
-    passed = (
-        mc_pass
-        and wf.passed
-        and (sens is None or sens.passed)
-        and cross["confirmed"]
-        and corr["max_corr"] < cfg.confirm_max_corr
-    )
+    sens_passed = sens is not None and sens.passed
+    sens_min_pf = f"{sens.min_neighbor_pf:.3f}" if sens else "n/a"
+    corr_passed = corr["max_corr"] < cfg.confirm_max_corr
+
+    passed = mc_pass and wf.passed and sens_passed and cross["confirmed"] and corr_passed
 
     return GateResult(
         gate="CONFIRM",
@@ -303,11 +301,9 @@ def _run_confirm(
         reason=(
             f"MC={'PASS' if mc_pass else 'FAIL'} p_ruin={mc.p_ruin:.3f} "
             f"WF={'PASS' if wf.passed else 'FAIL'} {wf.profitable_windows}/{wf.total_windows} "
-            f"sens={'PASS' if sens is None or sens.passed else 'FAIL'} "
-            f"min_pf={f'{sens.min_neighbor_pf:.3f}' if sens else 'n/a'} "
+            f"sens={'PASS' if sens_passed else 'FAIL'} min_pf={sens_min_pf} "
             f"cross={'PASS' if cross['confirmed'] else 'FAIL'} "
-            f"corr={'PASS' if corr['max_corr'] < cfg.confirm_max_corr else 'FAIL'} "
-            f"max_corr={corr['max_corr']:.3f}"
+            f"corr={'PASS' if corr_passed else 'FAIL'} max_corr={corr['max_corr']:.3f}"
         ),
         metrics={
             "p_ruin": mc.p_ruin,

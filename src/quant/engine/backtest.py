@@ -193,16 +193,22 @@ def run_backtest(
     pf_val = pf(trade_pnl)
     sh = sharpe(daily)
     so = sortino(daily)
-    # Calculate trading period in years for annualized return
+    # Annualized return requires period length in years
     if len(data) > 1:
-        trading_days = (data.index[-1] - data.index[0]).days
-        years = max(trading_days / 365.25, 1 / 365.25)  # at least 1 day
+        calendar_days = (data.index[-1] - data.index[0]).days
+        years = max(calendar_days / 365.25, 1 / 365.25)  # at least 1 day
     else:
         years = 1.0
 
-    # Return-on-drawdown for Calmar calculation
-    return_on_dd_pct = (sum(trade_pnl) / max(abs(dd_usd), 1)) * 100 if dd_usd != 0 else 0.0
-    annual_ret_pct = return_on_dd_pct / years
+    # Total return as percentage of initial notional value
+    initial_equity = data["close"].iloc[0] * mult
+    if initial_equity <= 0 or not np.isfinite(initial_equity):
+        raise ValueError(
+            f"Cannot compute returns: initial close={data['close'].iloc[0]}, "
+            f"mult={mult}. First bar may be corrupt."
+        )
+    total_ret_pct = sum(trade_pnl) / initial_equity * 100
+    annual_ret_pct = total_ret_pct / years
     cal = calmar(annual_ret_pct, abs(dd_pct))
     d_pnl = daily_pnl_usd(trade_pnl, oos_start, oos_end)
 
@@ -213,9 +219,6 @@ def run_backtest(
         )
     else:
         qwr = {}
-
-    # Total return as percentage of initial notional value
-    total_ret_pct = sum(trade_pnl) / (data["close"].iloc[0] * mult) * 100
 
     return BacktestResult(
         pf=pf_val,

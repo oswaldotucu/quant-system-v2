@@ -89,7 +89,7 @@ def wilders_smooth(arr: np.ndarray, period: int) -> np.ndarray:  # noqa: ANN001
     """Wilder's smoothing (exponential moving average variant).
 
     Seed = mean of arr[1:period+1]. Then:
-        s[i] = s[i-1] - s[i-1]/period + arr[i]
+        s[i] = (s[i-1] * (period - 1) + arr[i]) / period
 
     Used for ATR, +DM, -DM, and other Wilder-family indicators.
     """
@@ -99,7 +99,7 @@ def wilders_smooth(arr: np.ndarray, period: int) -> np.ndarray:  # noqa: ANN001
         return s
     s[period] = arr[1 : period + 1].mean()
     for i in range(period + 1, n):
-        s[i] = s[i - 1] - s[i - 1] / period + arr[i]
+        s[i] = (s[i - 1] * (period - 1) + arr[i]) / period
     return s
 
 

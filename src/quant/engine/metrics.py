@@ -14,6 +14,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+_CALMAR_CAP = 99.99
+_SORTINO_CAP = 99.99
+
 
 @dataclass(frozen=True)
 class BacktestResult:
@@ -63,17 +66,21 @@ def sharpe(daily_returns: list[float] | np.ndarray, risk_free: float = 0.0) -> f
 
 
 def sortino(daily_returns: list[float] | np.ndarray, risk_free: float = 0.0) -> float:
-    """Annualized Sortino ratio (penalizes downside volatility only)."""
+    """Annualized Sortino ratio (penalizes downside volatility only).
+
+    Uses the authoritative downside deviation formula:
+      DD = sqrt(mean(min(r_i, 0)^2))   (RMS of clamped returns)
+    All observations contribute — positive returns contribute 0 to the sum
+    but are counted in the denominator.
+    """
     arr = np.array(daily_returns, dtype=float)
     if len(arr) < 2:
         return 0.0
     excess = arr - risk_free / 252
-    downside = arr[arr < 0]
-    if len(downside) == 0:
-        return float("inf")
-    downside_std = np.std(downside, ddof=1)
+    downside = np.minimum(excess, 0.0)
+    downside_std = float(np.sqrt(np.mean(downside**2)))
     if downside_std == 0:
-        return 0.0
+        return _SORTINO_CAP if float(np.mean(excess)) > 0 else 0.0
     return float(np.mean(excess) / downside_std * math.sqrt(252))
 
 
@@ -98,7 +105,7 @@ def max_drawdown(equity_curve: list[float] | np.ndarray) -> tuple[float, float]:
 def calmar(annual_return_pct: float, max_dd_pct_abs: float) -> float:
     """Calmar ratio: annual_return% / |max_dd%|. Target > 3.0."""
     if max_dd_pct_abs == 0:
-        return 0.0
+        return _CALMAR_CAP if annual_return_pct > 0 else 0.0
     return annual_return_pct / abs(max_dd_pct_abs)
 
 

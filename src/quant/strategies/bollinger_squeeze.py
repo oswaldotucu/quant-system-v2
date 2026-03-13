@@ -83,13 +83,21 @@ class BollingerSqueezeStrategy:
         sma_vals = sma(close, bb_period)
         std = rolling_std(close, bb_period)
 
-        upper = sma_vals + bb_std * std
-        lower = sma_vals - bb_std * std
+        upper_raw = sma_vals + bb_std * std
+        lower_raw = sma_vals - bb_std * std
 
-        # Bandwidth: (upper - lower) / middle
+        # Shift bands by 1 bar so breakout signals compare close[i] against
+        # the PREVIOUS bar's band — avoids self-referential bias where a large
+        # bar move both pushes the band AND exceeds it.
+        upper = np.roll(upper_raw, 1)
+        upper[0] = np.nan
+        lower = np.roll(lower_raw, 1)
+        lower[0] = np.nan
+
+        # Bandwidth uses unshifted bands — measures current bar's volatility state.
         # Avoid division by zero where SMA is 0 (shouldn't happen with real prices)
         with np.errstate(divide="ignore", invalid="ignore"):
-            bandwidth = np.where(sma_vals != 0.0, (upper - lower) / sma_vals, 0.0)
+            bandwidth = np.where(sma_vals != 0.0, (upper_raw - lower_raw) / sma_vals, 0.0)
 
         # --- Squeeze detection ---
         # A bar is "in squeeze" when bandwidth < squeeze_threshold

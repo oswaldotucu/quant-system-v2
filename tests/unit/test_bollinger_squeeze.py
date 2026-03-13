@@ -58,8 +58,8 @@ class TestDirectionMatchesEntries:
         total = long_count + short_count
         assert total > 0, "Expected at least one directional signal"
 
-    def test_long_entries_are_above_upper_band(self, sample_ohlcv: pd.DataFrame) -> None:
-        """Long entries should occur when close > upper Bollinger Band."""
+    def test_long_entries_are_above_shifted_upper_band(self, sample_ohlcv: pd.DataFrame) -> None:
+        """Long entries should occur when close > previous bar's upper Bollinger Band."""
         params = BollingerSqueezeStrategy.default_params()
         entries, _, direction = BollingerSqueezeStrategy.generate(sample_ohlcv, params)
 
@@ -67,19 +67,21 @@ class TestDirectionMatchesEntries:
         bb_period = params["bb_period"]
         bb_std = params["bb_std"]
 
-        # Recompute upper band for verification
-        sma = pd.Series(close).rolling(bb_period).mean().values
+        # Recompute upper band and shift by 1 bar (matching strategy logic)
+        sma_vals = pd.Series(close).rolling(bb_period).mean().values
         std = pd.Series(close).rolling(bb_period).std(ddof=1).values
-        upper = sma + bb_std * std
+        upper_raw = sma_vals + bb_std * std
+        upper = np.roll(upper_raw, 1)
+        upper[0] = np.nan
 
-        # All long entries must have close > upper band
-        # Only check bars past warmup where rolling values are valid (not NaN)
+        # All long entries must have close > shifted upper band (previous bar's band)
+        # Only check bars past warmup where shifted rolling values are valid
         long_mask = entries & direction
         valid = ~np.isnan(upper)
         check_mask = long_mask & valid
         if check_mask.sum() > 0:
             assert np.all(close[check_mask] > upper[check_mask]), (
-                "Long entries should have close above upper Bollinger Band"
+                "Long entries should have close above previous bar's upper Bollinger Band"
             )
 
 
