@@ -10,6 +10,7 @@ RULE: commission_rt already includes both sides (round-trip). Never double-count
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any
 
 import numpy as np
@@ -31,6 +32,7 @@ from quant.engine.metrics import (
 
 log = logging.getLogger(__name__)
 
+_time_exit_lock = threading.Lock()
 _time_exit_warning_emitted = False
 
 try:
@@ -84,14 +86,16 @@ def run_backtest(
     cfg = get_settings()
     idx = pd.DatetimeIndex(data.index)
 
-    global _time_exit_warning_emitted
-    if cfg.time_exit and not cfg.session_filter and not _time_exit_warning_emitted:
-        log.warning(
-            "time_exit=True without session_filter=True: entries outside session hours "
-            "will be force-closed at %d:00 ET",
-            cfg.exit_time_et,
-        )
-        _time_exit_warning_emitted = True
+    if cfg.time_exit and not cfg.session_filter:
+        global _time_exit_warning_emitted
+        with _time_exit_lock:
+            if not _time_exit_warning_emitted:
+                log.warning(
+                    "time_exit=True without session_filter=True: entries outside session hours "
+                    "will be force-closed at %d:00 ET",
+                    cfg.exit_time_et,
+                )
+                _time_exit_warning_emitted = True
 
     if cfg.session_filter:
         session_mask = make_session_mask(idx, cfg.session_start_et, cfg.session_end_et)

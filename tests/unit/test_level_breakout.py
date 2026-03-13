@@ -83,7 +83,7 @@ class TestFilteredEntries:
 class TestUnfilteredEntries:
     def test_unfiltered_trades_both_directions(self) -> None:
         """Unfiltered mode should produce both long and short entries."""
-        data = _make_data(periods=2000, start="2024-01-01 09:00")
+        data = _make_data(periods=5000, start="2024-01-01 09:00")
         params = {
             "level_type": "pdhl",
             "filter_type": "unfiltered",
