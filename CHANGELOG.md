@@ -5,6 +5,35 @@ Format: [date] | component | what changed | why.
 
 ---
 
+## [2026-03-13] — V2 Sentinel Paradigm: Levels + Filters + Portfolio Optimization
+
+### Added
+- **Level computation module** — `src/quant/strategies/levels.py`: compute_pdhl(), compute_or30(), compute_monthly_hl(), compute_quarterly_hl(), compute_semiannual_hl(), compute_annual_hl(). All levels use previous period data only (shift(1) before ffill). 26 tests.
+- **Directional filter module** — `src/quant/strategies/filters.py`: macd_filter(5,13,5), bb_filter, kc_filter, ema_trend_filter, consensus_filter. Each returns +1/−1/0 int8 array. 19 tests.
+- **Level breakout strategy** — `src/quant/strategies/level_breakout.py`: Unified strategy combining 6 level types × 6 filter modes. Stop-order fill simulation via 4th return array (entry_prices). Intra-bar touch detection (high >= level for longs). 23 tests.
+- **Session time filter** — `src/quant/data/session.py`: make_session_mask() (9-14 ET), make_time_exit_mask() (forced close at exit hour), make_dow_mask() (Thu/Fri only). 11 tests.
+- **SL × Exit grid expander** — `src/quant/portfolio/grid_expander.py`: Sentinel's 7-SL × 4-EXIT grid (28 variants per base strategy). 8 tests.
+- **Portfolio optimizer** — `src/quant/portfolio/optimizer.py`: Greedy Sharpe maximization with correlation filter (max_corr=0.85), Monte Carlo validation. Sentinel's proven methodology.
+- **5m param spaces** — 13 `_5m` entries in `param_space.py` with tighter TP/SL and wider period ranges.
+- **Stop-order fill simulation** — `backtest.py` detects 4-element strategy returns and uses vectorbt's `price` + `StopEntryPrice.FillPrice` for level-price fills.
+- **Seed script** — `scripts/seed_level_experiments.py`: Seeds 51 level-based experiments (6 levels × multiple filters × 3 instruments × 5m).
+- **7 new test files, ~95 new tests** (157 → ~255).
+
+### Fixed
+- **search.py nullable numeric `or` bug** — Lines 60-61: `n_trials or cfg.optuna_trials` → `n_trials if n_trials is not None else cfg.optuna_trials`. Same for `early_stop`.
+- **MTF EMA warmup hardcoded** — `mtf_ema_alignment.py` warmup was `htf_period * 4` (15m-specific). Now detects bar resolution dynamically from DatetimeIndex.
+
+### Changed
+- **backtest.py** — Session filter, time exit, DOW filter hooks added. Entry price support for level strategies.
+- **settings.py** — Added session_filter, session_start_et, session_end_et, exit_time_et, dow_filter, dow_allowed_days.
+- **param_space.py** — `get_param_space()` now accepts optional `timeframe` parameter for 5m lookup.
+- **registry.py** — Added level_breakout (total: 14 strategies).
+
+### Commission Model Verified
+- $3.40 RT confirmed correct (Sentinel's conservative rate). Per-instrument commission not needed — $3.40 exceeds all real costs by >$0.90, ensuring robustness.
+
+---
+
 ## [2026-03-10] — Full Repo Code Review + 10-Task Fix Sprint
 
 ### Fixed

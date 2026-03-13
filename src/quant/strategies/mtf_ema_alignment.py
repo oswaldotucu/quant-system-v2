@@ -1,14 +1,14 @@
-"""Multi-Timeframe EMA Alignment — 15m crossover confirmed by 1h trend.
+"""Multi-Timeframe EMA Alignment — LTF crossover confirmed by 1h trend (works at any timeframe).
 
 Theory: Short-timeframe signals are more reliable when they agree with
 longer-timeframe trend direction. Reduces false crossovers in choppy markets.
 
 Logic:
-- Resample 15m data -> 1h internally (no protocol change)
-- Fast/slow EMA crossover on 15m as entry trigger
+- Resample LTF data -> 1h internally (no protocol change)
+- Fast/slow EMA crossover on LTF as entry trigger
 - 1h EMA slope (current > previous) as trend confirmation
-- Long:  15m fast EMA crosses above slow EMA AND 1h EMA rising
-- Short: 15m fast EMA crosses below slow EMA AND 1h EMA falling
+- Long:  LTF fast EMA crosses above slow EMA AND 1h EMA rising
+- Short: LTF fast EMA crosses below slow EMA AND 1h EMA falling
 - Exit:  TP/SL handled by backtest engine
 """
 
@@ -51,7 +51,15 @@ class MtfEmaAlignmentStrategy:
         slow_period: int = params["slow_ema"]
         htf_period: int = params["htf_ema"]
 
-        warmup = slow_period
+        # Detect bar resolution from data index to compute correct HTF warmup
+        if len(data.index) >= 2:
+            bar_seconds = (data.index[1] - data.index[0]).total_seconds()
+            bars_per_hour = max(int(3600 / bar_seconds), 1)
+        else:
+            bars_per_hour = 4  # default for 15m
+
+        # HTF EMA needs htf_period hourly bars → htf_period * bars_per_hour LTF bars
+        warmup = max(slow_period, htf_period * bars_per_hour)
         if n < warmup + 1:
             zeros = np.zeros(n, dtype=bool)
             return zeros.copy(), zeros.copy(), zeros.copy()

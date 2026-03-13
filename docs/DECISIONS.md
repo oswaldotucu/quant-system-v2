@@ -182,3 +182,45 @@ a local dev tool; can be self-hosted if needed).
 - Weight WF-OOS windows more heavily: Adds complexity without clear benefit.
 
 **Consequences**: Strategies that are profitable on 3+ of 4 walk-forward windows (including WF-IS) pass. This is a moderate bar that catches overfitting without being prohibitively strict.
+
+---
+
+## [2026-03-13] — Level-Based Entry Fill: Bar Close (Not Level Price)
+
+**Context**: The Sentinel research uses level prices (PDH, OR30, etc.) as entry fill prices, simulating stop orders. In NinjaTrader, strategies trigger on OnBarClose, so the strategy logic only runs after the bar closes. The question was whether V2 should simulate stop-order fills at the level price or use bar-close fills.
+
+**Decision**: Implement stop-order fill simulation via vectorbt's `price` parameter. Level strategies return a 4th array (entry_prices) with the level value on entry bars. backtest.py passes this to `vbt.Portfolio.from_signals(price=exec_price_series, stop_entry_price=StopEntryPrice.FillPrice)`. TP/SL are calculated from the actual fill price.
+
+**Alternatives**: (1) Bar-close fills — simpler, more conservative, but doesn't match live trading mechanics. (2) Next-bar-open fills — most conservative but overly pessimistic.
+
+**Consequences**: Level strategies get more accurate P&L simulation. The Strategy Protocol remains unchanged (backtest.py detects 3 vs 4 element returns). Existing indicator strategies continue using close-based fills (entry_prices=None).
+
+---
+
+## [2026-03-13] — Sentinel Paradigm Shift: 5m + Levels + Filters
+
+**Context**: All 74 V2 experiments were REJECTED. Root cause: 15m indicator strategies are too sparse (~0.05% entry density, 60-80 OOS trades vs 100 needed). The Sentinel project on the same data produced $4,909/day MNQ-only portfolio with Sharpe 11.23 using a fundamentally different approach.
+
+**Decision**: Adopt Sentinel's level + filter paradigm:
+1. Add 5m resolution support (session filter 9-14 ET, time exits at 12/13/14/15 ET)
+2. Add level computation module (PDH/PDL, OR30, Monthly/Quarterly/Semi/Annual H/L)
+3. Add directional filters (MACD(5,13), BB, KC, EMA, Consensus)
+4. Create unified level_breakout strategy (6 levels × 6 filters = 36 combos)
+5. Add portfolio-level optimization (greedy Sharpe with correlation filter)
+6. Drop all mean-reversion strategies (categorically fails per Sentinel's 130K+ config test)
+
+**Alternatives**: (1) Keep tweaking 15m indicator strategies — proven not to work. (2) Adopt Sentinel's code directly — different architecture, wouldn't integrate with V2's pipeline.
+
+**Consequences**: 51 new level-based experiments seeded. Commission model kept at $3.40 RT (conservative). DOW filter (Thu/Fri only) available but off by default. SL grid expansion creates 28 variants per passing strategy for portfolio diversification.
+
+---
+
+## [2026-03-13] — Level Experiment Notes Convention
+
+**Context**: The level_breakout strategy is parameterized by level_type and filter_type, but the existing experiments table has no dedicated columns for these. Multiple experiments share the same (strategy, ticker, timeframe) tuple.
+
+**Decision**: Store level_type and filter_type in the `notes` column as `"level=annual,filter=macd"`. Updated the unique index to include COALESCE(notes, '') so different level/filter combos are treated as distinct experiments.
+
+**Alternatives**: (1) Add dedicated columns — requires schema migration, more disruptive. (2) Encode in strategy name (e.g., "level_breakout_annual_macd") — bloats registry.
+
+**Consequences**: The pipeline must parse notes to extract level_type/filter_type and inject them into params before running the strategy. The seed script handles this convention.

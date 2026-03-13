@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from config.instruments import CONTRACT_MULT
@@ -59,30 +60,101 @@ def run_backtest(
     if not _VBT_AVAILABLE:
         raise RuntimeError("vectorbt is required for backtesting. Run: uv sync")
 
-    entries, exits, direction = strategy.generate(data, params)
+    # Strategy returns either 3 or 4 arrays. Level strategies return entry_prices.
+    result = strategy.generate(data, params)
+    if len(result) == 4:
+        entries, exits, direction, entry_prices = result
+    else:
+        entries, exits, direction = result
+        entry_prices = None
+
+    if len(entries) != len(data) or len(exits) != len(data) or len(direction) != len(data):
+        raise ValueError(
+            f"Strategy output length mismatch: entries={len(entries)}, exits={len(exits)}, "
+            f"direction={len(direction)}, data={len(data)}"
+        )
+    if entry_prices is not None and len(entry_prices) != len(data):
+        raise ValueError(f"entry_prices length {len(entry_prices)} != data length {len(data)}")
+
+    # -- Session, DOW, and time-exit filters --
+    from quant.data.session import make_dow_mask, make_session_mask, make_time_exit_mask
+
+    cfg = get_settings()
+    idx = pd.DatetimeIndex(data.index)
+
+    if cfg.session_filter:
+        session_mask = make_session_mask(idx, cfg.session_start_et, cfg.session_end_et)
+        entries = entries & session_mask
+
+    if cfg.dow_filter:
+        allowed = tuple(int(d) for d in cfg.dow_allowed_days.split(","))
+        dow_mask = make_dow_mask(idx, allowed_days=allowed)
+        entries = entries & dow_mask
+
+    # -- Time-based forced exit: close positions at exit_time_et --
+    if cfg.time_exit:
+        time_exit_mask = make_time_exit_mask(idx, cfg.exit_time_et)
+        exits = exits | time_exit_mask
 
     # Separate long and short signals
     long_entries = entries & direction
     short_entries = entries & ~direction
 
+    # -- Build execution price array for stop-order fill simulation --
+    # Level strategies return entry_prices: the price at which a stop order fills.
+    # We use vectorbt's `price` param to set fill price, and `stop_entry_price`
+    # = FillPrice so TP/SL are calculated relative to the actual fill price.
+    if entry_prices is not None:
+        from vectorbt.portfolio.enums import StopEntryPrice
+
+        exec_price = np.full(len(data), np.inf, dtype=np.float64)  # inf = use close
+        entry_mask = long_entries | short_entries
+        # Only use level price where we actually have entries AND level is not NaN
+        valid_entry = entry_mask & ~np.isnan(entry_prices)
+        exec_price[valid_entry] = entry_prices[valid_entry]
+        # Guard: remove entries with no valid fill price (still inf)
+        invalid_fill = (long_entries | short_entries) & np.isinf(exec_price)
+        if invalid_fill.any():
+            log.warning("Removing %d entries with no valid fill price", invalid_fill.sum())
+            long_entries = long_entries & ~invalid_fill
+            short_entries = short_entries & ~invalid_fill
+
+        exec_price_series: pd.Series | None = pd.Series(exec_price, index=data.index)
+        stop_entry_price = StopEntryPrice.FillPrice
+    else:
+        exec_price_series = None
+        stop_entry_price = None
+
     mult = CONTRACT_MULT.get(ticker, 1.0)
-    cfg = get_settings()
     commission_per_side = cfg.commission_rt / 2  # vectorbt charges per side
 
     median_price = data["close"].median()
 
-    pf_vbt = vbt.Portfolio.from_signals(
-        data["close"],
+    pf_kwargs: dict[str, Any] = dict(
         entries=long_entries,
         exits=exits,
         short_entries=short_entries,
         short_exits=exits,
         tp_stop=params.get("tp_pct", 1.0) / 100,
         sl_stop=params.get("sl_pct", 2.8) / 100,
-        fees=commission_per_side / median_price if median_price != 0 else 0.0,
+        fees=(
+            commission_per_side / median_price
+            if (median_price != 0 and not np.isnan(median_price))
+            else 0.0
+        ),
         freq="1min",  # vectorbt needs freq for time-based metrics
         size=1.0,
         size_type="amount",
+    )
+
+    if exec_price_series is not None:
+        pf_kwargs["price"] = exec_price_series
+    if stop_entry_price is not None:
+        pf_kwargs["stop_entry_price"] = stop_entry_price
+
+    pf_vbt = vbt.Portfolio.from_signals(
+        data["close"],
+        **pf_kwargs,
     )
 
     trades = pf_vbt.trades.records_readable
@@ -112,8 +184,9 @@ def run_backtest(
     else:
         years = 1.0
 
-    total_return_pct = (sum(trade_pnl) / max(abs(dd_usd), 1)) * 100 if dd_usd != 0 else 0.0
-    annual_ret_pct = total_return_pct / years
+    # Return-on-drawdown for Calmar calculation
+    return_on_dd_pct = (sum(trade_pnl) / max(abs(dd_usd), 1)) * 100 if dd_usd != 0 else 0.0
+    annual_ret_pct = return_on_dd_pct / years
     cal = calmar(annual_ret_pct, abs(dd_pct))
     d_pnl = daily_pnl_usd(trade_pnl, oos_start, oos_end)
 
@@ -125,6 +198,7 @@ def run_backtest(
     else:
         qwr = {}
 
+    # Total return as percentage of initial notional value
     total_ret_pct = sum(trade_pnl) / (data["close"].iloc[0] * mult) * 100
 
     return BacktestResult(

@@ -27,6 +27,7 @@ from quant.engine.backtest import run_backtest
 from quant.engine.monte_carlo import monte_carlo
 from quant.engine.sensitivity import parameter_sensitivity
 from quant.engine.walk_forward import walk_forward
+from quant.optimizer.objective import parse_level_notes
 from quant.optimizer.param_space import get_param_space
 from quant.optimizer.search import run_optuna
 from quant.strategies.registry import get_strategy
@@ -110,7 +111,9 @@ def _run_screen(
     # Use IS data only — OOS must never be touched before OOS_VAL gate
     recent = is_full(data).iloc[-n_bars:]
 
-    result = run_backtest(strategy_cls, recent, strategy_cls.default_params(), exp.ticker)
+    # Inject fixed params from notes (e.g. level_type, filter_type for level_breakout)
+    screen_params = {**strategy_cls.default_params(), **parse_level_notes(exp.notes)}
+    result = run_backtest(strategy_cls, recent, screen_params, exp.ticker)
     passed = result.pf >= cfg.screen_min_pf and result.trades >= cfg.screen_min_trades
 
     return GateResult(
@@ -143,6 +146,7 @@ def _run_is_opt(
             ticker=exp.ticker,
             exp_id=exp.id,
             n_trials=cfg.optuna_trials,
+            notes=exp.notes,
         )
     except ValueError as e:
         return GateResult(gate="IS_OPT", passed=False, reason=str(e), metrics={})
@@ -184,7 +188,10 @@ def _run_oos_val(
         )
 
     oos_data = oos(data)  # 2024-present
-    result = run_backtest(strategy_cls, oos_data, exp.params, exp.ticker)
+    # Inject fixed params from notes as safety belt — for experiments whose IS_OPT
+    # was run before the notes-injection fix, exp.params won't have level_type/filter_type.
+    oos_params = {**exp.params, **parse_level_notes(exp.notes)}
+    result = run_backtest(strategy_cls, oos_data, oos_params, exp.ticker)
 
     passed = (
         result.pf >= cfg.oos_min_pf
@@ -235,6 +242,9 @@ def _run_confirm(
             gate="CONFIRM", passed=False, reason="No params from IS_OPT gate", metrics={}
         )
 
+    # Inject fixed params from notes as safety belt (same as OOS_VAL)
+    confirm_params = {**exp.params, **parse_level_notes(exp.notes)}
+
     oos_data = oos(data)
 
     # Reuse stored trade_pnl from OOS_VAL instead of re-running backtest
@@ -243,7 +253,7 @@ def _run_confirm(
         trade_pnl_for_mc = stored_pnl
     else:
         log.warning("CONFIRM exp %d: trade_pnl not in DB, re-running OOS backtest", exp.id)
-        oos_result = run_backtest(strategy_cls, oos_data, exp.params, exp.ticker)
+        oos_result = run_backtest(strategy_cls, oos_data, confirm_params, exp.ticker)
         trade_pnl_for_mc = oos_result.trade_pnl
 
     # 1. Monte Carlo
@@ -251,18 +261,20 @@ def _run_confirm(
     mc_pass = mc.p_ruin < cfg.mc_max_p_ruin and mc.p_positive > cfg.mc_min_p_positive
 
     # 2. Walk-forward
-    wf = walk_forward(strategy_cls, data, exp.params, exp.ticker)
+    wf = walk_forward(strategy_cls, data, confirm_params, exp.ticker)
 
     # 3. Parameter sensitivity
     try:
         param_space = get_param_space(exp.strategy)
-        sens = parameter_sensitivity(strategy_cls, oos_data, exp.params, param_space, exp.ticker)
+        sens = parameter_sensitivity(
+            strategy_cls, oos_data, confirm_params, param_space, exp.ticker
+        )
     except Exception as e:
         log.warning("Sensitivity check failed: %s", e)
         sens = None
 
     # 4. Cross-instrument
-    cross = _check_cross_instrument(exp, strategy_cls)
+    cross = _check_cross_instrument(exp, strategy_cls, confirm_params)
 
     # 5. Portfolio correlation
     corr = _check_portfolio_correlation(exp, trade_pnl_for_mc)
@@ -301,10 +313,12 @@ def _run_confirm(
 def _check_cross_instrument(
     exp: Experiment,
     strategy_cls: Any,
+    params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run same params on the other 2 instruments. Pass if >= 1 also passes."""
     from config.instruments import TICKERS
 
+    run_params = params if params is not None else exp.params
     others = [t for t in TICKERS if t != exp.ticker]
     cfg = get_settings()
     confirmed = False
@@ -313,7 +327,7 @@ def _check_cross_instrument(
         try:
             other_data = get_ohlcv(other_ticker, exp.timeframe)
             other_oos = oos(other_data)
-            r = run_backtest(strategy_cls, other_oos, exp.params, other_ticker)
+            r = run_backtest(strategy_cls, other_oos, run_params, other_ticker)
             if r.pf >= cfg.oos_min_pf and r.trades >= cfg.cross_min_trades:
                 confirmed = True
                 break

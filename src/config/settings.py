@@ -52,6 +52,25 @@ class Settings(BaseSettings):
     autostart_runner: bool = False
     poll_interval: int = 60  # seconds
 
+    # -- Session filtering (Sentinel research) --------------------------------
+    session_filter: bool = True
+    session_start_et: int = 9
+    session_end_et: int = 14
+    exit_time_et: int = 15  # force exit hour ET (options: 12,13,14,15)
+    time_exit: bool = True  # force exit at exit_time_et; disable for overnight holds
+    dow_filter: bool = False  # off by default; enable for Thu/Fri-only
+    dow_allowed_days: str = "3,4"  # comma-separated weekday ints
+
+    @field_validator("dow_allowed_days", mode="before")
+    @classmethod
+    def validate_dow_days(cls, v: str) -> str:
+        """Validate dow_allowed_days is comma-separated ints in 0-6."""
+        for part in str(v).split(","):
+            day = int(part.strip())
+            if not 0 <= day <= 6:
+                raise ValueError(f"DOW day must be 0-6, got {day}")
+        return str(v)
+
     @field_validator("data_dir", "pine_dir", "checklist_dir", "staging_dir", mode="before")
     @classmethod
     def resolve_path(cls, v: str | Path) -> Path:

@@ -17,7 +17,7 @@ import pandas as pd
 
 from config.settings import get_settings
 from db.queries import insert_trial
-from quant.optimizer.objective import build_objective
+from quant.optimizer.objective import build_objective, parse_level_notes
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ def run_optuna(
     exp_id: int,
     n_trials: int | None = None,
     early_stop: int | None = None,
+    notes: str | None = None,
 ) -> OptimizationResult:
     """Run Optuna optimization for IS_OPT gate.
 
@@ -52,15 +53,17 @@ def run_optuna(
         exp_id:      DB experiment ID (trials are stored here)
         n_trials:    Override settings.optuna_trials
         early_stop:  Stop if no improvement after N consecutive trials
+        notes:       Experiment notes (e.g. "level=annual,filter=macd") — parsed
+                     and injected as fixed params that Optuna cannot override.
 
     Returns:
         OptimizationResult with best_params and diagnostics
     """
     cfg = get_settings()
-    n_trials = n_trials or cfg.optuna_trials
-    early_stop = early_stop or cfg.optuna_early_stop
+    n_trials = n_trials if n_trials is not None else cfg.optuna_trials
+    early_stop = early_stop if early_stop is not None else cfg.optuna_early_stop
 
-    objective = build_objective(strategy, data, ticker, exp_id)
+    objective = build_objective(strategy, data, ticker, exp_id, notes=notes)
 
     study = optuna.create_study(
         direction="maximize",
@@ -121,8 +124,13 @@ def run_optuna(
             f"No valid trials found for {strategy.name}/{ticker}. Strategy has no IS edge."
         )
 
+    # Merge fixed params from notes into best_params so they're stored in DB.
+    # This ensures OOS_VAL and CONFIRM gates get the correct level_type/filter_type
+    # when they read params from the experiment record.
+    best_params = {**study.best_params, **parse_level_notes(notes)}
+
     return OptimizationResult(
-        best_params=study.best_params,
+        best_params=best_params,
         best_is_sharpe=study.best_value,
         best_is_train_pf=study.best_trial.user_attrs.get("is_train_pf", 0.0),
         best_is_val_pf=study.best_trial.user_attrs.get("is_val_pf", 0.0),

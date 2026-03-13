@@ -24,6 +24,32 @@ from quant.optimizer.param_space import get_param_space
 
 log = logging.getLogger(__name__)
 
+
+def parse_level_notes(notes: str | None) -> dict[str, str]:
+    """Parse experiment notes into fixed params for level_breakout.
+
+    Notes format: "level=annual,filter=macd"
+    Returns: {"level_type": "annual", "filter_type": "macd"}
+
+    Returns empty dict if notes is None or doesn't match the expected format.
+    """
+    if notes is None:
+        return {}
+    result: dict[str, str] = {}
+    for part in notes.split(","):
+        part = part.strip()
+        if "=" not in part:
+            continue
+        key, _, value = part.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if key == "level":
+            result["level_type"] = value
+        elif key == "filter":
+            result["filter_type"] = value
+    return result
+
+
 # IS-train prune thresholds
 IS_TRAIN_MIN_PF = 1.1
 IS_TRAIN_MIN_TRADES = 15
@@ -39,6 +65,7 @@ def build_objective(
     data: pd.DataFrame,
     ticker: str,
     exp_id: int,
+    notes: str | None = None,
 ) -> Any:
     """Return a closure that Optuna calls on each trial.
 
@@ -47,6 +74,8 @@ def build_objective(
         data:      Full OHLCV data (IS period only — OOS must NOT be in here)
         ticker:    For CONTRACT_MULT lookup
         exp_id:    Experiment ID (for storing trial results to DB)
+        notes:     Experiment notes (e.g. "level=annual,filter=macd") — parsed
+                   and injected as fixed params that override Optuna suggestions.
 
     Returns:
         objective function: (trial) -> float (IS-val Sharpe, 0 if pruned)
@@ -57,9 +86,13 @@ def build_objective(
     train_data = is_train(data)
     val_data = is_val(data)
     param_space = get_param_space(strategy.name)
+    fixed_from_notes = parse_level_notes(notes)
 
     def objective(trial: optuna.Trial) -> float:
         params = _suggest_params(trial, param_space)
+        # Inject fixed params from notes (e.g. level_type, filter_type).
+        # These override Optuna suggestions — they are NOT optimizable.
+        params.update(fixed_from_notes)
 
         # -- IS-train: fast prune -----------------------------------------------
         try:

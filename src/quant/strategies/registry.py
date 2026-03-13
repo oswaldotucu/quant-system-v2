@@ -18,6 +18,7 @@ from quant.strategies.bollinger_squeeze import BollingerSqueezeStrategy
 from quant.strategies.donchian_breakout import DonchianBreakoutStrategy
 from quant.strategies.ema_rsi import EmaRsiStrategy
 from quant.strategies.keltner_channel import KeltnerChannelStrategy
+from quant.strategies.level_breakout import LevelBreakoutStrategy
 from quant.strategies.macd_trend import MacdTrendStrategy
 from quant.strategies.mtf_ema_alignment import MtfEmaAlignmentStrategy
 from quant.strategies.regime_switch import RegimeSwitchStrategy
@@ -31,6 +32,7 @@ from quant.strategies.volume_breakout import VolumeBreakoutStrategy
 STRATEGY_REGISTRY: dict[str, Any] = {
     "ema_rsi": EmaRsiStrategy,
     "adx_ema": AdxEmaStrategy,
+    "level_breakout": LevelBreakoutStrategy,
     "bollinger_squeeze": BollingerSqueezeStrategy,
     "donchian_breakout": DonchianBreakoutStrategy,
     "supertrend": SupertrendStrategy,

@@ -46,9 +46,7 @@ class TestGeneratesSignals:
         entries, _exits, _direction = KeltnerChannelStrategy.generate(sample_ohlcv, params)
 
         warmup = max(params["kc_period"], params["atr_period"])
-        assert not np.any(entries[:warmup]), (
-            f"Found entries in warmup zone (first {warmup} bars)"
-        )
+        assert not np.any(entries[:warmup]), f"Found entries in warmup zone (first {warmup} bars)"
 
 
 class TestDirectionMatchesEntries:

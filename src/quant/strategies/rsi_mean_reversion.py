@@ -43,9 +43,8 @@ class RsiMeanReversionStrategy:
         rsi_vals = rsi(close, params["rsi_period"])
 
         # Long: RSI was below oversold, now crosses back above
-        long_entries = (
-            (rsi_vals[1:] >= params["rsi_oversold"])
-            & (rsi_vals[:-1] < params["rsi_oversold"])
+        long_entries = (rsi_vals[1:] >= params["rsi_oversold"]) & (
+            rsi_vals[:-1] < params["rsi_oversold"]
         )
         long_entries = np.concatenate([[False], long_entries])
 
