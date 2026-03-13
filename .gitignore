@@ -55,3 +55,6 @@ logs/
 
 # Docker
 .docker/
+
+# Git worktrees
+.worktrees/
