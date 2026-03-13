@@ -22,6 +22,8 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
+_MAX_SHARPE_CAP = 99.0  # cap for zero-variance (infinite) Sharpe ratio
+
 
 @dataclass
 class StrategyCandidate:
@@ -78,9 +80,9 @@ def _sharpe_ratio(daily_pnl: np.ndarray) -> float:
     std = daily_pnl.std(ddof=1)
     if std == 0:
         if mean > 0:
-            return 99.0  # effectively infinite Sharpe, capped for numerical stability
+            return _MAX_SHARPE_CAP
         elif mean < 0:
-            return -99.0
+            return -_MAX_SHARPE_CAP
         return 0.0
     return float(mean / std * np.sqrt(252))
 

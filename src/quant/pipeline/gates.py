@@ -34,6 +34,20 @@ from quant.strategies.registry import get_strategy
 
 log = logging.getLogger(__name__)
 
+
+def _params_with_notes(base_params: dict[str, Any], notes: str | None) -> dict[str, Any]:
+    """Merge base params with any fixed params parsed from experiment notes.
+
+    Used at SCREEN, OOS_VAL, and CONFIRM gates to inject level_type/filter_type
+    from notes like "level=annual,filter=macd". Returns a new dict; base_params
+    is not mutated.
+    """
+    fixed = parse_level_notes(notes)
+    if not fixed:
+        return base_params
+    return {**base_params, **fixed}
+
+
 GATE_SEQUENCE: dict[str, str | None] = {
     "SCREEN": "IS_OPT",
     "IS_OPT": "OOS_VAL",
@@ -111,8 +125,7 @@ def _run_screen(
     # Use IS data only — OOS must never be touched before OOS_VAL gate
     recent = is_full(data).iloc[-n_bars:]
 
-    # Inject fixed params from notes (e.g. level_type, filter_type for level_breakout)
-    screen_params = {**strategy_cls.default_params(), **parse_level_notes(exp.notes)}
+    screen_params = _params_with_notes(strategy_cls.default_params(), exp.notes)
     result = run_backtest(strategy_cls, recent, screen_params, exp.ticker)
     passed = result.pf >= cfg.screen_min_pf and result.trades >= cfg.screen_min_trades
 
@@ -188,9 +201,7 @@ def _run_oos_val(
         )
 
     oos_data = oos(data)  # 2024-present
-    # Inject fixed params from notes as safety belt — for experiments whose IS_OPT
-    # was run before the notes-injection fix, exp.params won't have level_type/filter_type.
-    oos_params = {**exp.params, **parse_level_notes(exp.notes)}
+    oos_params = _params_with_notes(exp.params, exp.notes)
     result = run_backtest(strategy_cls, oos_data, oos_params, exp.ticker)
 
     passed = (
@@ -242,8 +253,7 @@ def _run_confirm(
             gate="CONFIRM", passed=False, reason="No params from IS_OPT gate", metrics={}
         )
 
-    # Inject fixed params from notes as safety belt (same as OOS_VAL)
-    confirm_params = {**exp.params, **parse_level_notes(exp.notes)}
+    confirm_params = _params_with_notes(exp.params, exp.notes)
 
     oos_data = oos(data)
 
@@ -313,12 +323,11 @@ def _run_confirm(
 def _check_cross_instrument(
     exp: Experiment,
     strategy_cls: Any,
-    params: dict[str, Any] | None = None,
+    params: dict[str, Any],
 ) -> dict[str, Any]:
     """Run same params on the other 2 instruments. Pass if >= 1 also passes."""
     from config.instruments import TICKERS
 
-    run_params = params if params is not None else exp.params
     others = [t for t in TICKERS if t != exp.ticker]
     cfg = get_settings()
     confirmed = False
@@ -327,7 +336,7 @@ def _check_cross_instrument(
         try:
             other_data = get_ohlcv(other_ticker, exp.timeframe)
             other_oos = oos(other_data)
-            r = run_backtest(strategy_cls, other_oos, run_params, other_ticker)
+            r = run_backtest(strategy_cls, other_oos, params, other_ticker)
             if r.pf >= cfg.oos_min_pf and r.trades >= cfg.cross_min_trades:
                 confirmed = True
                 break

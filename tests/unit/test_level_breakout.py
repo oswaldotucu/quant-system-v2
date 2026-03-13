@@ -96,7 +96,9 @@ class TestUnfilteredEntries:
             long_count = (entries & direction).sum()
             short_count = (entries & ~direction).sum()
             # Both directions should have at least some entries
-            assert long_count > 0 or short_count > 0  # At minimum one direction
+            assert long_count > 0 and short_count > 0, (
+                f"Expected both directions, got longs={long_count}, shorts={short_count}"
+            )
 
 
 class TestLevelTypes:

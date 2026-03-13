@@ -113,7 +113,7 @@ def run_backtest(
         valid_entry = entry_mask & ~np.isnan(entry_prices)
         exec_price[valid_entry] = entry_prices[valid_entry]
         # Guard: remove entries with no valid fill price (still inf)
-        invalid_fill = (long_entries | short_entries) & np.isinf(exec_price)
+        invalid_fill = entry_mask & np.isinf(exec_price)
         if invalid_fill.any():
             log.warning("Removing %d entries with no valid fill price", invalid_fill.sum())
             long_entries = long_entries & ~invalid_fill
